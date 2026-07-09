@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="3.1" xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd">
+  <persistence-unit name="umsPU" transaction-type="JTA">
+    <jta-data-source>jdbc/ums</jta-data-source>
+    <exclude-unlisted-classes>false</exclude-unlisted-classes>
+    <shared-cache-mode>DISABLE_SELECTIVE</shared-cache-mode>
+    <properties>
+      <!-- Schema is owned by Flyway (src/main/resources/db/migration). Never let
+           EclipseLink alter tables - see FlywayMigrationListener, which runs
+           migrations before the persistence unit is first used. -->
+      <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
+    </properties>
+  </persistence-unit>
+</persistence>

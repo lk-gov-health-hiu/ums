@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Equipment Status — UMS</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#235c52">
+<style>
+  body{font-family:system-ui,sans-serif;max-width:480px;margin:0 auto;padding:16px;color:#1d2320;}
+  h1{font-size:20px;}
+  label{display:block;margin-top:14px;font-weight:600;font-size:14px;}
+  select,input{width:100%;padding:10px;font-size:16px;margin-top:4px;box-sizing:border-box;}
+  button{width:100%;padding:14px;font-size:16px;margin-top:20px;background:#235c52;color:#fff;border:none;border-radius:4px;}
+  #status{margin-top:14px;font-size:14px;}
+  #queueNote{margin-top:8px;font-size:13px;color:#b5762a;}
+</style>
+</head>
+<body>
+  <h1>Daily Equipment Status</h1>
+
+  <form id="loginForm">
+    <label for="username">Username</label>
+    <input type="text" id="username" required>
+    <label for="password">Password</label>
+    <input type="password" id="password" required>
+    <button type="submit">Sign in</button>
+    <div id="loginStatus"></div>
+  </form>
+
+  <form id="entryForm" style="display:none">
+    <label for="equipment">Equipment</label>
+    <select id="equipment" required></select>
+
+    <label for="status">Status</label>
+    <select id="status" required>
+      <option value="FUNCTIONING">Functioning</option>
+      <option value="UNDER_REPAIR">Under Repair</option>
+      <option value="AWAITING_PARTS">Awaiting Parts</option>
+      <option value="NON_FUNCTIONAL_BER">Non-Functional — Beyond Economical Repair</option>
+      <option value="IDLE_NO_OPERATOR">Idle — No Operator</option>
+    </select>
+
+    <label for="count">Procedures done today</label>
+    <input type="number" id="count" min="0" value="0" required>
+
+    <button type="submit">Submit</button>
+  </form>
+  <div id="status"></div>
+  <div id="queueNote"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

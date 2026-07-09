@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="primefaces">
+<h:head>
+    <title>Utilisation Monitoring System</title>
+    <h:outputStylesheet library="css" name="ums.css"/>
+</h:head>
+<h:body>
+    <p:menubar>
+        <p:menuitem value="Institutions" outcome="/admin/institution/list.xhtml" icon="pi pi-building"
+                    rendered="#{sessionController.canManageMasterData()}"/>
+        <p:menuitem value="Equipment Types" outcome="/admin/equipmentType/list.xhtml" icon="pi pi-list"
+                    rendered="#{sessionController.canManageMasterData()}"/>
+        <f:facet name="options">
+            <p:menuitem value="Logout (#{sessionController.webUser.displayName})" action="#{sessionController.logout()}" icon="pi pi-sign-out"/>
+        </f:facet>
+    </p:menubar>
+
+    <div class="ums-content">
+        <ui:insert name="content"/>
+    </div>
+</h:body>
+</html>

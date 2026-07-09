@@ -1,0 +1,57 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h2>Equipment Types</h2>
+        <p>The dynamic list (CT, MRI, PET, ...) that equipment and procedures are recorded against.</p>
+        <h:form id="typeForm">
+            <p:toolbar>
+                <p:toolbarGroup>
+                    <p:commandButton value="New Equipment Type" icon="pi pi-plus"
+                                      actionListener="#{equipmentTypeController.prepareNew()}"
+                                      update=":typeForm:editDialog" oncomplete="PF('typeEditDialog').show()"/>
+                </p:toolbarGroup>
+            </p:toolbar>
+
+            <p:dataTable value="#{equipmentTypeController.equipmentTypes}" var="t" paginator="true" rows="20">
+                <p:column headerText="Name">
+                    <h:outputText value="#{t.name}"/>
+                </p:column>
+                <p:column headerText="Parent">
+                    <h:outputText value="#{t.parent.name}"/>
+                </p:column>
+                <p:column headerText="Status">
+                    <h:outputText value="#{t.retired ? 'Retired' : 'Active'}"/>
+                </p:column>
+                <p:column headerText="">
+                    <p:commandButton icon="pi pi-pencil" update=":typeForm:editDialog" oncomplete="PF('typeEditDialog').show()">
+                        <f:setPropertyActionListener target="#{equipmentTypeController.current}" value="#{t}"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            <p:dialog widgetVar="typeEditDialog" header="Equipment Type" modal="true" width="420" id="editDialog">
+                <h:panelGrid columns="2" rendered="#{equipmentTypeController.current != null}" style="width:100%">
+                    <p:outputLabel value="Name"/>
+                    <p:inputText value="#{equipmentTypeController.current.name}" required="true"/>
+
+                    <p:outputLabel value="Parent"/>
+                    <p:selectOneMenu value="#{equipmentTypeController.current.parent}" converter="equipmentTypeConverter">
+                        <f:selectItem itemLabel="— none (top level) —" itemValue="#{null}"/>
+                        <f:selectItems value="#{equipmentTypeController.equipmentTypes}" var="p" itemLabel="#{p.name}" itemValue="#{p}"/>
+                    </p:selectOneMenu>
+                </h:panelGrid>
+                <f:facet name="footer">
+                    <p:commandButton value="Save" action="#{equipmentTypeController.save()}"
+                                      update=":typeForm" oncomplete="PF('typeEditDialog').hide()"/>
+                    <p:commandButton value="Retire" action="#{equipmentTypeController.retire()}"
+                                      update=":typeForm" oncomplete="PF('typeEditDialog').hide()"
+                                      rendered="#{equipmentTypeController.current.id != null}"/>
+                </f:facet>
+            </p:dialog>
+        </h:form>
+    </ui:define>
+</ui:composition>

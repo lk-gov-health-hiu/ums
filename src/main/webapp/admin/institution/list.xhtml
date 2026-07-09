@@ -1,0 +1,85 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h2>Institutions</h2>
+        <h:form id="institutionForm">
+            <p:toolbar>
+                <p:toolbarGroup>
+                    <p:commandButton value="New Institution" icon="pi pi-plus"
+                                      actionListener="#{institutionController.prepareNew()}"
+                                      update=":institutionForm:editDialog" oncomplete="PF('editDialog').show()"/>
+                </p:toolbarGroup>
+            </p:toolbar>
+
+            <p:dataTable value="#{institutionController.institutions}" var="ins" paginator="true" rows="20">
+                <p:column headerText="Name">
+                    <h:outputText value="#{ins.name}"/>
+                </p:column>
+                <p:column headerText="Type">
+                    <h:outputText value="#{ins.type}"/>
+                </p:column>
+                <p:column headerText="Reports to">
+                    <h:outputText value="#{ins.parent.name}"/>
+                </p:column>
+                <p:column headerText="Area">
+                    <h:outputText value="#{ins.area.name}"/>
+                </p:column>
+                <p:column headerText="Code">
+                    <h:outputText value="#{ins.code}"/>
+                </p:column>
+                <p:column headerText="Status">
+                    <h:outputText value="#{ins.retired ? 'Retired' : 'Active'}"/>
+                </p:column>
+                <p:column headerText="">
+                    <p:commandButton icon="pi pi-pencil" update=":institutionForm:editDialog" oncomplete="PF('editDialog').show()">
+                        <f:setPropertyActionListener target="#{institutionController.current}" value="#{ins}"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            <p:dialog widgetVar="editDialog" header="Institution" modal="true" width="480" id="editDialog">
+                <h:panelGrid columns="2" rendered="#{institutionController.current != null}" style="width:100%">
+                    <p:outputLabel value="Name"/>
+                    <p:inputText value="#{institutionController.current.name}" required="true"/>
+
+                    <p:outputLabel value="Type"/>
+                    <p:selectOneMenu value="#{institutionController.current.type}">
+                        <f:selectItems value="#{institutionController.institutionTypes}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Reports to"/>
+                    <p:selectOneMenu value="#{institutionController.current.parent}" converter="institutionConverter">
+                        <f:selectItem itemLabel="— none (top level) —" itemValue="#{null}"/>
+                        <f:selectItems value="#{institutionController.institutions}" var="p" itemLabel="#{p.name}" itemValue="#{p}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Area"/>
+                    <p:selectOneMenu value="#{institutionController.current.area}" converter="areaConverter">
+                        <f:selectItem itemLabel="— none —" itemValue="#{null}"/>
+                        <f:selectItems value="#{institutionController.areas}" var="a" itemLabel="#{a.name}" itemValue="#{a}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Code"/>
+                    <p:inputText value="#{institutionController.current.code}"/>
+
+                    <p:outputLabel value="Address"/>
+                    <p:inputText value="#{institutionController.current.address}"/>
+
+                    <p:outputLabel value="Phone"/>
+                    <p:inputText value="#{institutionController.current.phone}"/>
+                </h:panelGrid>
+                <f:facet name="footer">
+                    <p:commandButton value="Save" action="#{institutionController.save()}"
+                                      update=":institutionForm" oncomplete="PF('editDialog').hide()"/>
+                    <p:commandButton value="Retire" action="#{institutionController.retire()}"
+                                      update=":institutionForm" oncomplete="PF('editDialog').hide()"
+                                      rendered="#{institutionController.current.id != null}"/>
+                </f:facet>
+            </p:dialog>
+        </h:form>
+    </ui:define>
+</ui:composition>

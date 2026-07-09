@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+<h:head>
+    <title>Sign in — Utilisation Monitoring System</title>
+    <h:outputStylesheet library="css" name="ums.css"/>
+</h:head>
+<h:body>
+    <h:form>
+        <p:panel header="Utilisation Monitoring System" styleClass="ums-login-panel">
+            <p:messages showDetail="true" closable="true"/>
+            <h:panelGrid columns="1" style="width:100%">
+                <p:outputLabel for="username" value="Username"/>
+                <p:inputText id="username" value="#{sessionController.username}" required="true"/>
+
+                <p:outputLabel for="password" value="Password"/>
+                <p:password id="password" value="#{sessionController.password}" required="true" feedback="false"/>
+
+                <p:commandButton value="Sign in" action="#{sessionController.login()}" ajax="false" style="margin-top:12px"/>
+            </h:panelGrid>
+        </p:panel>
+    </h:form>
+</h:body>
+</html>

@@ -1,0 +1,8 @@
+target/
+*.class
+.nb-gradle/
+nbproject/private/
+*.log
+.idea/
+*.iml
+.claude/

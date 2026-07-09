@@ -1,0 +1,13 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h2>Dashboard</h2>
+        <p>National/provincial/regional utilisation summaries (§6 of the architecture doc) render here, fed by
+            <code>/api/utilisation/summary</code>. Not yet built — this is the scaffold's landing page.</p>
+        <h:panelGroup rendered="#{not sessionController.loggedIn}">
+            <p>Please <h:link outcome="/admin/login.xhtml" value="sign in"/>.</p>
+        </h:panelGroup>
+    </ui:define>
+</ui:composition>
