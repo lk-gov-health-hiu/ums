@@ -1,0 +1,79 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h2>Users</h2>
+        <h:form id="userForm">
+            <p:toolbar>
+                <p:toolbarGroup>
+                    <p:commandButton value="New User" icon="pi pi-plus"
+                                      actionListener="#{webUserController.prepareNew()}"
+                                      update=":userForm:editDialog" oncomplete="PF('userEditDialog').show()"/>
+                </p:toolbarGroup>
+            </p:toolbar>
+
+            <p:dataTable value="#{webUserController.users}" var="u" paginator="true" rows="20">
+                <p:column headerText="Username">
+                    <h:outputText value="#{u.username}"/>
+                </p:column>
+                <p:column headerText="Name">
+                    <h:outputText value="#{u.displayName}"/>
+                </p:column>
+                <p:column headerText="Role">
+                    <h:outputText value="#{u.role}"/>
+                </p:column>
+                <p:column headerText="Institution">
+                    <h:outputText value="#{u.institution.name}"/>
+                </p:column>
+                <p:column headerText="Status">
+                    <h:outputText value="#{u.retired ? 'Retired' : 'Active'}"/>
+                </p:column>
+                <p:column headerText="">
+                    <p:commandButton icon="pi pi-pencil" update=":userForm:editDialog" oncomplete="PF('userEditDialog').show()">
+                        <f:setPropertyActionListener target="#{webUserController.current}" value="#{u}"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            <p:dialog widgetVar="userEditDialog" header="User" modal="true" width="440" id="editDialog">
+                <h:panelGrid columns="2" rendered="#{webUserController.current != null}" style="width:100%">
+                    <p:outputLabel value="Username"/>
+                    <p:inputText value="#{webUserController.current.username}" required="true"
+                                 disabled="#{webUserController.current.id != null}"/>
+
+                    <p:outputLabel value="Display Name"/>
+                    <p:inputText value="#{webUserController.current.displayName}"/>
+
+                    <p:outputLabel value="Email"/>
+                    <p:inputText value="#{webUserController.current.email}"/>
+
+                    <p:outputLabel value="Role"/>
+                    <p:selectOneMenu value="#{webUserController.current.role}">
+                        <f:selectItems value="#{webUserController.assignableRoles}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Institution"/>
+                    <p:selectOneMenu value="#{webUserController.current.institution}" converter="institutionConverter"
+                                      disabled="#{!sessionController.systemAdmin}">
+                        <f:selectItem itemLabel="— none (national-level account) —" itemValue="#{null}"/>
+                        <f:selectItems value="#{webUserController.institutions}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Password"/>
+                    <p:password value="#{webUserController.newPassword}" feedback="false"
+                                 placeholder="leave blank to keep current password"/>
+                </h:panelGrid>
+                <f:facet name="footer">
+                    <p:commandButton value="Save" action="#{webUserController.save()}"
+                                      update=":userForm" oncomplete="PF('userEditDialog').hide()"/>
+                    <p:commandButton value="Retire" action="#{webUserController.retire()}"
+                                      update=":userForm" oncomplete="PF('userEditDialog').hide()"
+                                      rendered="#{webUserController.current.id != null}"/>
+                </f:facet>
+            </p:dialog>
+        </h:form>
+    </ui:define>
+</ui:composition>

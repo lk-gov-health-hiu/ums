@@ -80,6 +80,16 @@ public class SessionController implements Serializable {
         return isInstitutionAdmin() || isInstitutionUser();
     }
 
+    /** System Admin manages equipment anywhere; Institution Admin only at their own institution — §5. */
+    public boolean canManageEquipment() {
+        return isSystemAdmin() || isInstitutionAdmin();
+    }
+
+    /** Same scoping as equipment: System Admin anywhere, Institution Admin for their own institution's users. */
+    public boolean canManageUsers() {
+        return isSystemAdmin() || isInstitutionAdmin();
+    }
+
     public Institution getScopeInstitution() {
         return isLoggedIn() ? webUser.getInstitution() : null;
     }

@@ -1,0 +1,75 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h2>Equipment</h2>
+        <p>The physical machines institution users report daily status and procedure counts against.</p>
+        <h:form id="equipmentForm">
+            <p:toolbar>
+                <p:toolbarGroup>
+                    <p:commandButton value="New Equipment" icon="pi pi-plus"
+                                      actionListener="#{equipmentController.prepareNew()}"
+                                      update=":equipmentForm:editDialog" oncomplete="PF('equipmentEditDialog').show()"/>
+                </p:toolbarGroup>
+            </p:toolbar>
+
+            <p:dataTable value="#{equipmentController.equipmentList}" var="e" paginator="true" rows="20">
+                <p:column headerText="Type">
+                    <h:outputText value="#{e.type.name}"/>
+                </p:column>
+                <p:column headerText="Institution">
+                    <h:outputText value="#{e.institution.name}"/>
+                </p:column>
+                <p:column headerText="Location">
+                    <h:outputText value="#{e.location}"/>
+                </p:column>
+                <p:column headerText="Asset Tag">
+                    <h:outputText value="#{e.assetTag}"/>
+                </p:column>
+                <p:column headerText="Status">
+                    <h:outputText value="#{e.retired ? 'Retired' : 'Active'}"/>
+                </p:column>
+                <p:column headerText="">
+                    <p:commandButton icon="pi pi-pencil" update=":equipmentForm:editDialog" oncomplete="PF('equipmentEditDialog').show()">
+                        <f:setPropertyActionListener target="#{equipmentController.current}" value="#{e}"/>
+                    </p:commandButton>
+                </p:column>
+            </p:dataTable>
+
+            <p:dialog widgetVar="equipmentEditDialog" header="Equipment" modal="true" width="460" id="editDialog">
+                <h:panelGrid columns="2" rendered="#{equipmentController.current != null}" style="width:100%">
+                    <p:outputLabel value="Type"/>
+                    <p:selectOneMenu value="#{equipmentController.current.type}" converter="equipmentTypeConverter">
+                        <f:selectItem itemLabel="— select —" itemValue="#{null}"/>
+                        <f:selectItems value="#{equipmentController.equipmentTypes}" var="t" itemLabel="#{t.name}" itemValue="#{t}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Institution"/>
+                    <p:selectOneMenu value="#{equipmentController.current.institution}" converter="institutionConverter"
+                                      disabled="#{!sessionController.systemAdmin}">
+                        <f:selectItems value="#{equipmentController.institutions}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
+                    </p:selectOneMenu>
+
+                    <p:outputLabel value="Location"/>
+                    <p:inputText value="#{equipmentController.current.location}" placeholder="e.g. Radiology Department"/>
+
+                    <p:outputLabel value="Asset Tag"/>
+                    <p:inputText value="#{equipmentController.current.assetTag}"/>
+
+                    <p:outputLabel value="Installed On"/>
+                    <p:calendar value="#{equipmentController.current.installedOn}" pattern="yyyy-MM-dd"/>
+                </h:panelGrid>
+                <f:facet name="footer">
+                    <p:commandButton value="Save" action="#{equipmentController.save()}"
+                                      update=":equipmentForm" oncomplete="PF('equipmentEditDialog').hide()"/>
+                    <p:commandButton value="Retire" action="#{equipmentController.retire()}"
+                                      update=":equipmentForm" oncomplete="PF('equipmentEditDialog').hide()"
+                                      rendered="#{equipmentController.current.id != null}"/>
+                </f:facet>
+            </p:dialog>
+        </h:form>
+    </ui:define>
+</ui:composition>
