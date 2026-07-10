@@ -90,7 +90,7 @@ public class StatusLogResource {
         }
         ApiResponse<Void> response = ApiResponse.ok(null);
         response.setMessage(isNew
-                ? "Saved — recorded today's entry."
+                ? "Saved — recorded entry for " + logDate + "."
                 : "Saved — replaced the entry already recorded for " + logDate + ".");
         return response;
     }
