@@ -6,3 +6,4 @@ nbproject/private/
 .idea/
 *.iml
 .claude/
+.playwright-mcp/

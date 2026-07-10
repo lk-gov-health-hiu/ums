@@ -1,6 +1,8 @@
 package lk.gov.health.ums.bean;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.faces.application.FacesMessage;
+import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -41,14 +43,20 @@ public class EquipmentTypeController implements Serializable {
     }
 
     public void save() {
-        if (current.getCreatedAt() == null) {
-            current.setCreatedBy(sessionController.getWebUser());
-            current.setCreatedAt(LocalDateTime.now());
-            equipmentTypeFacade.create(current);
-        } else {
-            current.setLastEditBy(sessionController.getWebUser());
-            current.setLastEditAt(LocalDateTime.now());
-            equipmentTypeFacade.edit(current);
+        try {
+            if (current.getCreatedAt() == null) {
+                current.setCreatedBy(sessionController.getWebUser());
+                current.setCreatedAt(LocalDateTime.now());
+                equipmentTypeFacade.create(current);
+            } else {
+                current.setLastEditBy(sessionController.getWebUser());
+                current.setLastEditAt(LocalDateTime.now());
+                equipmentTypeFacade.edit(current);
+            }
+        } catch (RuntimeException e) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(
+                    FacesMessage.SEVERITY_ERROR, "Could not save equipment type", e.getMessage()));
+            return;
         }
         equipmentTypes = equipmentTypeFacade.findAll();
     }

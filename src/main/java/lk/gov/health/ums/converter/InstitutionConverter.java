@@ -1,5 +1,6 @@
 package lk.gov.health.ums.converter;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.faces.component.UIComponent;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.convert.Converter;
@@ -8,7 +9,11 @@ import jakarta.inject.Inject;
 import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.facade.InstitutionFacade;
 
+/** Needs an explicit CDI scope to be discoverable under bean-discovery-mode="annotated"
+ *  (beans.xml) — without one, @FacesConverter(managed=true) silently falls back to a
+ *  plain `new` instance and @Inject never runs, leaving the facade null. */
 @FacesConverter(value = "institutionConverter", managed = true)
+@ApplicationScoped
 public class InstitutionConverter implements Converter<Institution> {
 
     @Inject

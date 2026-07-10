@@ -16,6 +16,8 @@
                 </p:toolbarGroup>
             </p:toolbar>
 
+            <p:messages id="messages" showDetail="true" closable="true"/>
+
             <p:dataTable value="#{equipmentTypeController.equipmentTypes}" var="t" paginator="true" rows="20">
                 <p:column headerText="Name">
                     <h:outputText value="#{t.name}"/>
@@ -46,7 +48,7 @@
                 </h:panelGrid>
                 <f:facet name="footer">
                     <p:commandButton value="Save" action="#{equipmentTypeController.save()}"
-                                      update=":typeForm" oncomplete="PF('typeEditDialog').hide()"/>
+                                      update=":typeForm:messages :typeForm" oncomplete="if (!args.validationFailed) { PF('typeEditDialog').hide(); }"/>
                     <p:commandButton value="Retire" action="#{equipmentTypeController.retire()}"
                                       update=":typeForm" oncomplete="PF('typeEditDialog').hide()"
                                       rendered="#{equipmentTypeController.current.id != null}"/>

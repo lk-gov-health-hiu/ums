@@ -1,6 +1,8 @@
 package lk.gov.health.ums.bean;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.faces.application.FacesMessage;
+import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -48,14 +50,20 @@ public class InstitutionController implements Serializable {
     }
 
     public void save() {
-        if (current.getCreatedAt() == null) {
-            current.setCreatedBy(sessionController.getWebUser());
-            current.setCreatedAt(LocalDateTime.now());
-            institutionFacade.create(current);
-        } else {
-            current.setLastEditBy(sessionController.getWebUser());
-            current.setLastEditAt(LocalDateTime.now());
-            institutionFacade.edit(current);
+        try {
+            if (current.getCreatedAt() == null) {
+                current.setCreatedBy(sessionController.getWebUser());
+                current.setCreatedAt(LocalDateTime.now());
+                institutionFacade.create(current);
+            } else {
+                current.setLastEditBy(sessionController.getWebUser());
+                current.setLastEditAt(LocalDateTime.now());
+                institutionFacade.edit(current);
+            }
+        } catch (RuntimeException e) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(
+                    FacesMessage.SEVERITY_ERROR, "Could not save institution", e.getMessage()));
+            return;
         }
         institutions = institutionFacade.findAll();
     }

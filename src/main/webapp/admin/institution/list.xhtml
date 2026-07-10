@@ -15,6 +15,8 @@
                 </p:toolbarGroup>
             </p:toolbar>
 
+            <p:messages id="messages" showDetail="true" closable="true"/>
+
             <p:dataTable value="#{institutionController.institutions}" var="ins" paginator="true" rows="20">
                 <p:column headerText="Name">
                     <h:outputText value="#{ins.name}"/>
@@ -74,7 +76,7 @@
                 </h:panelGrid>
                 <f:facet name="footer">
                     <p:commandButton value="Save" action="#{institutionController.save()}"
-                                      update=":institutionForm" oncomplete="PF('editDialog').hide()"/>
+                                      update=":institutionForm:messages :institutionForm" oncomplete="if (!args.validationFailed) { PF('editDialog').hide(); }"/>
                     <p:commandButton value="Retire" action="#{institutionController.retire()}"
                                       update=":institutionForm" oncomplete="PF('editDialog').hide()"
                                       rendered="#{institutionController.current.id != null}"/>

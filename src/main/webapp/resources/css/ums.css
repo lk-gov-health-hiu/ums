@@ -107,13 +107,21 @@ body .ui-menubar {
     flex: 1;
 }
 
-body .ui-menuitem-link,
-body .ui-menuitem-link .ui-menuitem-text,
-body .ui-menuitem-link .ui-menuitem-icon {
+body .ui-menuitem-link {
     background: transparent;
     color: var(--ums-ink-muted);
+}
+
+body .ui-menuitem-link .ui-menuitem-text {
+    color: inherit;
     font-family: var(--ums-font-body);
     font-weight: 500;
+}
+
+/* Icon glyph relies on the primeicons font-family — only recolor it,
+   never override font-family/weight here or the glyph renders as tofu. */
+body .ui-menuitem-link .ui-menuitem-icon {
+    color: inherit;
 }
 
 body .ui-menuitem-link:hover,
