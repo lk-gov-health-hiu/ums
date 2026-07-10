@@ -11,6 +11,12 @@ const loginStatusEl = document.getElementById('loginStatus');
 const statusEl = document.getElementById('status');
 const queueNoteEl = document.getElementById('queueNote');
 const equipmentSelect = document.getElementById('equipment');
+const statusSelect = document.getElementById('status');
+const statusField = document.getElementById('statusField');
+
+statusSelect.addEventListener('change', () => {
+    statusField.dataset.status = statusSelect.value;
+});
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js');

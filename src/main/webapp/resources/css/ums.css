@@ -1,3 +1,138 @@
+/* UMS "Instrument Panel" theme — a dark console skin layered over PrimeFaces'
+   Saga theme, styled after the equipment this system monitors (control-room
+   readouts, vitals monitors) rather than a generic admin-panel default.
+   Selectors are prefixed with `body` to out-specificity Saga's flat
+   single-class rules regardless of stylesheet load order. */
+
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('/ums/fonts/SpaceGrotesk-700.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'IBM Plex Sans';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/ums/fonts/IBMPlexSans-400.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'IBM Plex Sans';
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url('/ums/fonts/IBMPlexSans-600.woff2') format('woff2');
+}
+@font-face {
+    font-family: 'IBM Plex Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/ums/fonts/IBMPlexMono-400.woff2') format('woff2');
+}
+
+:root {
+    --ums-bg: #10171b;
+    --ums-panel: #1b252b;
+    --ums-panel-alt: #212d33;
+    --ums-hairline: #2e3a40;
+    --ums-ink: #e7edf0;
+    --ums-ink-muted: #8fa3ac;
+    --ums-green: #3fbf7f;
+    --ums-amber: #e0a64b;
+    --ums-red: #d9534f;
+    --ums-grey: #6b7680;
+    --ums-cyan: #4fc3d9;
+    --ums-cyan-dim: rgba(79, 195, 217, 0.16);
+    --ums-font-display: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+    --ums-font-body: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+    --ums-font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+}
+
+body {
+    background: var(--ums-bg);
+    color: var(--ums-ink);
+    font-family: var(--ums-font-body);
+}
+
+body h1, body h2, body h3 {
+    font-family: var(--ums-font-display);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+body a {
+    color: var(--ums-cyan);
+}
+
+body :focus-visible {
+    outline: 2px solid var(--ums-cyan);
+    outline-offset: 2px;
+}
+
+/* Top bar: brand + menubar */
+.ums-topbar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--ums-panel);
+    border-bottom: 1px solid var(--ums-hairline);
+    padding: 0 1rem;
+}
+
+.ums-brand {
+    font-family: var(--ums-font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--ums-ink);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.ums-brand small {
+    display: block;
+    font-family: var(--ums-font-body);
+    font-weight: 400;
+    font-size: 0.7rem;
+    color: var(--ums-ink-muted);
+    letter-spacing: 0.03em;
+}
+
+body .ui-menubar {
+    background: transparent;
+    border: 0 none;
+    padding: 0.5rem 0;
+    flex: 1;
+}
+
+body .ui-menuitem-link,
+body .ui-menuitem-link .ui-menuitem-text,
+body .ui-menuitem-link .ui-menuitem-icon {
+    background: transparent;
+    color: var(--ums-ink-muted);
+    font-family: var(--ums-font-body);
+    font-weight: 500;
+}
+
+body .ui-menuitem-link:hover,
+body .ui-menuitem-link.ui-state-hover {
+    background: var(--ums-cyan-dim);
+    color: var(--ums-ink);
+}
+
+body .ui-menuitem-link:hover .ui-menuitem-text,
+body .ui-menuitem-link:hover .ui-menuitem-icon {
+    color: var(--ums-ink);
+}
+
+body .ui-menu-child {
+    background: var(--ums-panel-alt);
+    border: 1px solid var(--ums-hairline);
+}
+
+/* Page content */
 .ums-content {
     max-width: 1100px;
     margin: 0 auto;
@@ -7,4 +142,218 @@
 .ums-login-panel {
     max-width: 360px;
     margin: 96px auto;
+}
+
+/* Panels / toolbars / dialogs */
+body .ui-widget-content {
+    background: var(--ums-panel);
+    color: var(--ums-ink);
+    border-color: var(--ums-hairline);
+}
+
+body .ui-widget-header {
+    background: var(--ums-panel-alt);
+    color: var(--ums-ink);
+    border-color: var(--ums-hairline);
+}
+
+body .ui-panel-content {
+    background: var(--ums-panel);
+    color: var(--ums-ink);
+    border-color: var(--ums-hairline);
+}
+
+body .ui-toolbar {
+    background: var(--ums-panel-alt);
+    border-color: var(--ums-hairline);
+    color: var(--ums-ink);
+}
+
+body .ui-dialog {
+    background: var(--ums-panel);
+}
+
+body .ui-dialog .ui-dialog-titlebar {
+    background: var(--ums-panel-alt);
+    color: var(--ums-ink);
+    border-bottom: 1px solid var(--ums-hairline);
+}
+
+body .ui-dialog .ui-dialog-content {
+    background: var(--ums-panel);
+    color: var(--ums-ink);
+}
+
+body .ui-dialog .ui-dialog-footer {
+    background: var(--ums-panel);
+    border-top: 1px solid var(--ums-hairline);
+}
+
+body .ui-dialog-titlebar-icon .ui-icon {
+    filter: invert(1) brightness(1.4);
+}
+
+/* Data tables */
+body .ui-datatable-header,
+body .ui-datatable-footer {
+    background: var(--ums-panel-alt);
+    color: var(--ums-ink);
+    border-color: var(--ums-hairline);
+}
+
+body .ui-datatable thead th {
+    background: var(--ums-panel-alt);
+    color: var(--ums-ink-muted);
+    border-color: var(--ums-hairline);
+    font-family: var(--ums-font-mono);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+body .ui-datatable tbody td {
+    background: var(--ums-panel);
+    color: var(--ums-ink);
+    border-color: var(--ums-hairline);
+}
+
+body .ui-datatable-odd > td {
+    background: var(--ums-panel-alt);
+}
+
+body .ui-datatable-data tr:hover > td {
+    background: var(--ums-cyan-dim);
+}
+
+body .ui-paginator {
+    background: var(--ums-panel-alt);
+    border-color: var(--ums-hairline);
+    color: var(--ums-ink);
+}
+
+body .ui-paginator .ui-paginator-page,
+body .ui-paginator .ui-paginator-next,
+body .ui-paginator .ui-paginator-prev,
+body .ui-paginator .ui-paginator-first,
+body .ui-paginator .ui-paginator-last {
+    color: var(--ums-ink-muted);
+}
+
+body .ui-paginator .ui-state-active {
+    background: var(--ums-cyan);
+    color: var(--ums-bg);
+}
+
+/* Buttons */
+body .ui-button {
+    background: var(--ums-cyan);
+    border: 1px solid var(--ums-cyan);
+    color: var(--ums-bg);
+    font-family: var(--ums-font-body);
+    font-weight: 600;
+}
+
+body .ui-button:enabled:hover {
+    background: #6fd2e3;
+    border-color: #6fd2e3;
+    color: var(--ums-bg);
+}
+
+/* Inputs */
+body .ui-inputtext,
+body .ui-inputtextarea,
+body .ui-selectonemenu,
+body .ui-inputfield {
+    background: var(--ums-bg);
+    color: var(--ums-ink);
+    border: 1px solid var(--ums-hairline);
+}
+
+body .ui-inputtext:enabled:focus,
+body .ui-selectonemenu:not(.ui-state-disabled).ui-state-focus {
+    border-color: var(--ums-cyan);
+    box-shadow: 0 0 0 1px var(--ums-cyan);
+}
+
+body .ui-selectonemenu-panel {
+    background: var(--ums-panel-alt);
+    border: 1px solid var(--ums-hairline);
+    color: var(--ums-ink);
+}
+
+body .ui-selectonemenu-items .ui-selectonemenu-item:hover {
+    background: var(--ums-cyan-dim);
+    color: var(--ums-ink);
+}
+
+body .ui-selectonemenu-label {
+    color: var(--ums-ink);
+}
+
+body label,
+body .ui-outputlabel {
+    color: var(--ums-ink-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Messages */
+body .ui-messages-error,
+body .ui-messages .ui-messages-fatal {
+    background: rgba(217, 83, 79, 0.15);
+    border-color: var(--ums-red);
+    color: #ff9b96;
+}
+
+body .ui-messages-info {
+    background: rgba(79, 195, 217, 0.12);
+    border-color: var(--ums-cyan);
+    color: var(--ums-ink);
+}
+
+/* Data / mono values — asset tags, codes, timestamps */
+.ums-mono {
+    font-family: var(--ums-font-mono);
+    font-size: 0.9rem;
+    color: var(--ums-ink-muted);
+}
+
+/* Signature element: a status pulse-dot, colored per MachineStatus, echoing
+   the equipment vitals monitors this system tracks utilisation for. */
+.status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--ums-font-mono);
+    font-size: 0.85rem;
+}
+
+.status-dot::before {
+    content: '';
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 0 currentColor;
+    animation: ums-pulse 2.2s ease-in-out infinite;
+}
+
+.status-functioning { color: var(--ums-green); }
+.status-under-repair { color: var(--ums-amber); }
+.status-awaiting-parts { color: var(--ums-amber); }
+.status-non-functional-ber { color: var(--ums-red); }
+.status-idle-no-operator { color: var(--ums-grey); }
+.status-unknown { color: var(--ums-ink-muted); }
+.status-unknown::before { animation: none; }
+
+@keyframes ums-pulse {
+    0% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    70% { box-shadow: 0 0 0 0.4rem transparent; opacity: 0.85; }
+    100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .status-dot::before {
+        animation: none;
+    }
 }

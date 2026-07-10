@@ -27,9 +27,12 @@
                     <h:outputText value="#{e.location}"/>
                 </p:column>
                 <p:column headerText="Asset Tag">
-                    <h:outputText value="#{e.assetTag}"/>
+                    <h:outputText styleClass="ums-mono" value="#{e.assetTag}"/>
                 </p:column>
-                <p:column headerText="Status">
+                <p:column headerText="Last Status">
+                    <span class="#{equipmentController.statusDotClass(e)}">#{equipmentController.statusLabel(e)}</span>
+                </p:column>
+                <p:column headerText="Record">
                     <h:outputText value="#{e.retired ? 'Retired' : 'Active'}"/>
                 </p:column>
                 <p:column headerText="">

@@ -6,13 +6,18 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lk.gov.health.ums.entity.Equipment;
 import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
+import lk.gov.health.ums.entity.StatusLog;
+import lk.gov.health.ums.enums.MachineStatus;
 import lk.gov.health.ums.facade.EquipmentFacade;
 import lk.gov.health.ums.facade.EquipmentTypeFacade;
 import lk.gov.health.ums.facade.InstitutionFacade;
+import lk.gov.health.ums.facade.StatusLogFacade;
 
 /**
  * Registers the physical machines (§4 of the architecture doc) that the
@@ -35,11 +40,14 @@ public class EquipmentController implements Serializable {
     @Inject
     private InstitutionFacade institutionFacade;
     @Inject
+    private StatusLogFacade statusLogFacade;
+    @Inject
     private SessionController sessionController;
 
     private List<Equipment> equipmentList;
     private List<EquipmentType> equipmentTypes;
     private List<Institution> institutions;
+    private Map<Long, StatusLog> latestStatusByEquipmentId;
     private Equipment current;
 
     @PostConstruct
@@ -53,6 +61,49 @@ public class EquipmentController implements Serializable {
             institutions = own != null ? List.of(own) : List.of();
             equipmentList = own != null ? equipmentFacade.findActiveByInstitution(own) : List.of();
         }
+        loadLatestStatuses();
+    }
+
+    /** Most recent {@link StatusLog} per equipment, for the "Last Status" pulse-dot column. */
+    private void loadLatestStatuses() {
+        latestStatusByEquipmentId = new HashMap<>();
+        if (equipmentList.isEmpty()) {
+            return;
+        }
+        List<StatusLog> logs = statusLogFacade.findByJpql(
+                "SELECT s FROM StatusLog s WHERE s.equipment IN :equipment ORDER BY s.logDate DESC",
+                Map.of("equipment", equipmentList));
+        for (StatusLog log : logs) {
+            latestStatusByEquipmentId.putIfAbsent(log.getEquipment().getId(), log);
+        }
+    }
+
+    public MachineStatus getLatestStatus(Equipment equipment) {
+        StatusLog log = latestStatusByEquipmentId.get(equipment.getId());
+        return log != null ? log.getStatus() : null;
+    }
+
+    public String getStatusDotClass(Equipment equipment) {
+        MachineStatus status = getLatestStatus(equipment);
+        return "status-dot " + (status != null
+                ? "status-" + status.name().toLowerCase().replace('_', '-')
+                : "status-unknown");
+    }
+
+    public String getStatusLabel(Equipment equipment) {
+        MachineStatus status = getLatestStatus(equipment);
+        if (status == null) {
+            return "No data yet";
+        }
+        String[] words = status.name().split("_");
+        StringBuilder label = new StringBuilder();
+        for (String word : words) {
+            if (label.length() > 0) {
+                label.append(' ');
+            }
+            label.append(word.charAt(0)).append(word.substring(1).toLowerCase());
+        }
+        return label.toString();
     }
 
     public void prepareNew() {

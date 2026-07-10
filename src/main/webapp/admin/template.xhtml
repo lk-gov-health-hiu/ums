@@ -9,21 +9,24 @@
     <h:outputStylesheet library="css" name="ums.css"/>
 </h:head>
 <h:body>
-    <p:menubar>
-        <p:menuitem value="Institutions" outcome="/admin/institution/list.xhtml" icon="pi pi-building"
-                    rendered="#{sessionController.canManageMasterData()}"/>
-        <p:menuitem value="Equipment Types" outcome="/admin/equipmentType/list.xhtml" icon="pi pi-list"
-                    rendered="#{sessionController.canManageMasterData()}"/>
-        <p:menuitem value="Equipment" outcome="/admin/equipment/list.xhtml" icon="pi pi-desktop"
-                    rendered="#{sessionController.canManageEquipment()}"/>
-        <p:menuitem value="Users" outcome="/admin/webUser/list.xhtml" icon="pi pi-users"
-                    rendered="#{sessionController.canManageUsers()}"/>
-        <p:menuitem value="Daily Entry" url="#{request.contextPath}/entry/" icon="pi pi-calendar"
-                    rendered="#{sessionController.isRestrictedToInstitution()}"/>
-        <f:facet name="options">
-            <p:menuitem value="Logout (#{sessionController.webUser.displayName})" action="#{sessionController.logout()}" icon="pi pi-sign-out"/>
-        </f:facet>
-    </p:menubar>
+    <div class="ums-topbar">
+        <span class="ums-brand">UMS<small>Utilisation Monitoring</small></span>
+        <p:menubar>
+            <p:menuitem value="Institutions" outcome="/admin/institution/list.xhtml" icon="pi pi-building"
+                        rendered="#{sessionController.canManageMasterData()}"/>
+            <p:menuitem value="Equipment Types" outcome="/admin/equipmentType/list.xhtml" icon="pi pi-list"
+                        rendered="#{sessionController.canManageMasterData()}"/>
+            <p:menuitem value="Equipment" outcome="/admin/equipment/list.xhtml" icon="pi pi-desktop"
+                        rendered="#{sessionController.canManageEquipment()}"/>
+            <p:menuitem value="Users" outcome="/admin/webUser/list.xhtml" icon="pi pi-users"
+                        rendered="#{sessionController.canManageUsers()}"/>
+            <p:menuitem value="Daily Entry" url="#{request.contextPath}/entry/" icon="pi pi-calendar"
+                        rendered="#{sessionController.isRestrictedToInstitution()}"/>
+            <f:facet name="options">
+                <p:menuitem value="Logout (#{sessionController.webUser.displayName})" action="#{sessionController.logout()}" icon="pi pi-sign-out"/>
+            </f:facet>
+        </p:menubar>
+    </div>
 
     <div class="ums-content">
         <ui:insert name="content"/>
