@@ -8,15 +8,23 @@ const QUEUE_KEY = 'ums.pendingStatusLogs';
 const loginForm = document.getElementById('loginForm');
 const entryForm = document.getElementById('entryForm');
 const loginStatusEl = document.getElementById('loginStatus');
-const statusEl = document.getElementById('status');
+const resultEl = document.getElementById('resultMessage');
 const queueNoteEl = document.getElementById('queueNote');
 const equipmentSelect = document.getElementById('equipment');
-const statusSelect = document.getElementById('status');
+const logDateInput = document.getElementById('logDate');
+const statusSelect = document.getElementById('statusSelect');
 const statusField = document.getElementById('statusField');
+const countInput = document.getElementById('count');
 
 statusSelect.addEventListener('change', () => {
     statusField.dataset.status = statusSelect.value;
 });
+
+function todayLocalIso() {
+    const now = new Date();
+    const offsetMs = now.getTimezoneOffset() * 60000;
+    return new Date(now - offsetMs).toISOString().slice(0, 10);
+}
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js');
@@ -30,7 +38,7 @@ async function loadEquipment() {
     }
     const body = await res.json();
     if (!body.success) {
-        statusEl.textContent = body.message;
+        resultEl.textContent = body.message;
         return false;
     }
     equipmentSelect.innerHTML = body.data
@@ -47,6 +55,9 @@ function showLogin() {
 function showEntry() {
     loginForm.style.display = 'none';
     entryForm.style.display = 'block';
+    const today = todayLocalIso();
+    logDateInput.value = today;
+    logDateInput.max = today;
 }
 
 loginForm.addEventListener('submit', async (event) => {
@@ -72,9 +83,9 @@ entryForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const payload = {
         equipmentId: Number(equipmentSelect.value),
-        logDate: new Date().toISOString().slice(0, 10),
-        status: document.getElementById('status').value,
-        procedureCount: Number(document.getElementById('count').value)
+        logDate: logDateInput.value,
+        status: statusSelect.value,
+        procedureCount: Number(countInput.value)
     };
     await submitOrQueue(payload);
 });
@@ -87,10 +98,10 @@ async function submitOrQueue(payload) {
             body: JSON.stringify(payload)
         });
         const body = await res.json();
-        statusEl.textContent = body.success ? 'Saved.' : body.message;
+        resultEl.textContent = body.message || (body.success ? 'Saved.' : 'Could not save — please try again.');
     } catch (networkError) {
         queueSubmission(payload);
-        statusEl.textContent = 'Offline — saved on this device, will send once back online.';
+        resultEl.textContent = 'Offline — saved on this device, will send once back online.';
     }
     renderQueueNote();
 }

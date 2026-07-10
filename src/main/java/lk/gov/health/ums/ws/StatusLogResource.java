@@ -54,7 +54,16 @@ public class StatusLogResource {
             return ApiResponse.error("You can only submit updates for your own institution.");
         }
 
-        LocalDate logDate = LocalDate.parse(request.getLogDate());
+        LocalDate logDate;
+        try {
+            logDate = LocalDate.parse(request.getLogDate());
+        } catch (RuntimeException e) {
+            return ApiResponse.error("A valid date is required.");
+        }
+        if (logDate.isAfter(LocalDate.now())) {
+            return ApiResponse.error("Cannot log a status for a future date.");
+        }
+
         StatusLog log = statusLogFacade.findByEquipmentAndDate(equipment, logDate);
         boolean isNew = log == null;
         if (isNew) {
@@ -67,7 +76,11 @@ public class StatusLogResource {
             log.setLastEditBy(user);
             log.setLastEditAt(LocalDateTime.now());
         }
-        log.setStatus(MachineStatus.valueOf(request.getStatus()));
+        try {
+            log.setStatus(MachineStatus.valueOf(request.getStatus()));
+        } catch (RuntimeException e) {
+            return ApiResponse.error("Unrecognized status.");
+        }
         log.setProcedureCount(request.getProcedureCount());
 
         if (isNew) {
@@ -75,7 +88,11 @@ public class StatusLogResource {
         } else {
             statusLogFacade.edit(log);
         }
-        return ApiResponse.ok(null);
+        ApiResponse<Void> response = ApiResponse.ok(null);
+        response.setMessage(isNew
+                ? "Saved — recorded today's entry."
+                : "Saved — replaced the entry already recorded for " + logDate + ".");
+        return response;
     }
 
 }
