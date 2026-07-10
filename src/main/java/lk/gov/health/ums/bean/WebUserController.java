@@ -1,6 +1,8 @@
 package lk.gov.health.ums.bean;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.faces.application.FacesMessage;
+import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
@@ -64,17 +66,25 @@ public class WebUserController implements Serializable {
     }
 
     public void save() {
+        boolean creating = current.getCreatedAt() == null;
         if (newPassword != null && !newPassword.isBlank()) {
             current.setPasswordHash(PasswordUtil.hash(newPassword));
         }
-        if (current.getCreatedAt() == null) {
-            current.setCreatedBy(sessionController.getWebUser());
-            current.setCreatedAt(LocalDateTime.now());
-            webUserFacade.create(current);
-        } else {
-            current.setLastEditBy(sessionController.getWebUser());
-            current.setLastEditAt(LocalDateTime.now());
-            webUserFacade.edit(current);
+        try {
+            if (creating) {
+                current.setCreatedBy(sessionController.getWebUser());
+                current.setCreatedAt(LocalDateTime.now());
+                webUserFacade.create(current);
+            } else {
+                current.setLastEditBy(sessionController.getWebUser());
+                current.setLastEditAt(LocalDateTime.now());
+                webUserFacade.edit(current);
+            }
+        } catch (RuntimeException e) {
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(
+                    FacesMessage.SEVERITY_ERROR, "Could not save user",
+                    "The username may already be in use, or a required field is missing."));
+            return;
         }
         newPassword = null;
         init();
