@@ -89,6 +89,7 @@ body :focus-visible {
     color: var(--ums-ink);
     letter-spacing: 0.02em;
     white-space: nowrap;
+    text-decoration: none;
 }
 
 .ums-brand small {

@@ -10,9 +10,13 @@
 </h:head>
 <h:body>
     <div class="ums-topbar">
-        <span class="ums-brand">UMS<small>Utilisation Monitoring</small></span>
+        <h:link outcome="/admin/index.xhtml" styleClass="ums-brand">
+            UMS<small>Utilisation Monitoring</small>
+        </h:link>
         <h:form id="navForm">
             <p:menubar>
+                <p:menuitem value="Home" outcome="/admin/index.xhtml" icon="pi pi-home"
+                            rendered="#{sessionController.loggedIn}"/>
                 <p:menuitem value="Institutions" outcome="/admin/institution/list.xhtml" icon="pi pi-building"
                             rendered="#{sessionController.canManageMasterData()}"/>
                 <p:menuitem value="Equipment Types" outcome="/admin/equipmentType/list.xhtml" icon="pi pi-list"
