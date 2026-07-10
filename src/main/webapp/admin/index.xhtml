@@ -1,13 +1,95 @@
 <ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
                 template="/admin/template.xhtml">
     <ui:define name="content">
-        <h2>Dashboard</h2>
-        <p>National/provincial/regional utilisation summaries (§6 of the architecture doc) render here, fed by
-            <code>/api/utilisation/summary</code>. Not yet built — this is the scaffold's landing page.</p>
         <h:panelGroup rendered="#{not sessionController.loggedIn}">
+            <h2>Dashboard</h2>
             <p>Please <h:link outcome="/admin/login.xhtml" value="sign in"/>.</p>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{sessionController.loggedIn}">
+            <h2>Dashboard</h2>
+            <p class="panel-caption">
+                Fleet-wide utilisation summary. Institution accounts see their own equipment only.
+            </p>
+
+            <div class="kpi-row">
+                <div class="kpi-tile">
+                    <div class="kpi-value">#{dashboardController.totalEquipment}</div>
+                    <div class="kpi-label">Equipment tracked</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-value">#{dashboardController.reportingRatePercent}%</div>
+                    <div class="kpi-label">Reported today (#{dashboardController.reportedToday}/#{dashboardController.totalEquipment})</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-value">#{dashboardController.functioningPercent}%</div>
+                    <div class="kpi-label">Functioning</div>
+                </div>
+                <div class="kpi-tile kpi-attention #{dashboardController.needsAttentionCount == 0 ? 'kpi-zero' : ''}">
+                    <div class="kpi-value">#{dashboardController.needsAttentionCount}</div>
+                    <div class="kpi-label">Needs attention</div>
+                </div>
+            </div>
+
+            <div class="dashboard-panel">
+                <h3>Fleet status</h3>
+                <p class="panel-caption">Latest reported status across all active equipment.</p>
+
+                <div class="status-bar">
+                    <ui:repeat value="#{dashboardController.presentStatuses}" var="status">
+                        <div class="status-bar-segment #{status.segClass()}"
+                             style="width:#{dashboardController.statusPercents[status]}%"/>
+                    </ui:repeat>
+                    <h:panelGroup layout="block" styleClass="status-bar-segment seg-never-reported"
+                                  style="width:#{dashboardController.neverReportedPercent}%"
+                                  rendered="#{dashboardController.neverReportedCount > 0}"/>
+                </div>
+
+                <div class="status-legend">
+                    <ui:repeat value="#{dashboardController.presentStatuses}" var="status">
+                        <span class="legend-item">
+                            <span class="legend-swatch #{status.segClass()}"/>
+                            #{status.label()} — #{dashboardController.statusCounts[status]} (#{dashboardController.statusPercents[status]}%)
+                        </span>
+                    </ui:repeat>
+                    <h:panelGroup styleClass="legend-item" rendered="#{dashboardController.neverReportedCount > 0}">
+                        <span class="legend-swatch seg-never-reported"/>
+                        Never reported — #{dashboardController.neverReportedCount} (#{dashboardController.neverReportedPercent}%)
+                    </h:panelGroup>
+                </div>
+            </div>
+
+            <div class="dashboard-panel">
+                <h3>Needs attention</h3>
+                <p class="panel-caption">Equipment currently down, awaiting parts, idle, or that has never reported.</p>
+
+                <h:panelGroup rendered="#{dashboardController.needsAttentionCount == 0}">
+                    <p>Nothing needs attention right now.</p>
+                </h:panelGroup>
+
+                <p:dataTable value="#{dashboardController.needsAttention}" var="row" paginator="true" rows="20"
+                             rendered="#{dashboardController.needsAttentionCount > 0}">
+                    <p:column headerText="Type">
+                        <h:outputText value="#{row.equipmentTypeName}"/>
+                    </p:column>
+                    <p:column headerText="Institution">
+                        <h:outputText value="#{row.institutionName}"/>
+                    </p:column>
+                    <p:column headerText="Location">
+                        <h:outputText value="#{row.location}"/>
+                    </p:column>
+                    <p:column headerText="Status">
+                        <span class="#{row.statusDotClass}">#{row.statusLabel}</span>
+                    </p:column>
+                    <p:column headerText="Last Reported">
+                        <h:outputText styleClass="ums-mono" value="#{row.lastReported}"/>
+                    </p:column>
+                </p:dataTable>
+            </div>
         </h:panelGroup>
     </ui:define>
 </ui:composition>

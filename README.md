@@ -89,12 +89,23 @@ mapping). Known data-quality notes carried over from the source, not import bugs
 
 Built: institution hierarchy (now populated from the real MoH registry), equipment-type dynamic
 list, equipment registry, the daily status/count entry flow (JSF admin CRUD + REST API + PWA),
-RBAC scoping, Flyway baseline + institution import.
+RBAC scoping, Flyway baseline + institution import, user management, and the utilisation
+dashboard (see below).
+
+**Dashboard** (`/admin/index.xhtml`, `DashboardController`) — fleet-wide for System
+Admin/National User, own-institution-only otherwise. Panels: KPI row (equipment tracked,
+reporting-compliance %, functioning %, needs-attention count), a stacked bar + legend showing
+the latest-status breakdown across the fleet, and a "needs attention" table (equipment
+currently down/awaiting parts/idle, plus equipment that has never once reported — the two are
+distinguished deliberately, since a missing report is its own failure mode, not proof the
+machine is fine). Panel choices are grounded in India NHM's BEMMP (facility-tier functional-status
+views) and DHIS2's reporting-completeness convention — see the dashboard-research notes in
+project memory. Aspirational panels that need data we don't capture yet (MTTR/MTBF, downtime
+cause codes, cost/procurement, warranty/lifecycle risk) are deliberately deferred.
 
 Deliberately not yet built (see the architecture decisions log):
 - **Procedure/PatientRecord UI** — `Procedure` entity exists; `PatientRecord` (optional
   patient-level detail) is phased in after core rollout, per the confirmed decision.
-- **National/provincial/regional dashboards** — `/admin/index.xhtml` is a placeholder;
-  the summary REST endpoint and charts aren't built yet.
-- **User management screen** — `WebUser` accounts currently need to be created directly
-  against the database.
+- **Provincial/RDHS league table and trend charts** — the dashboard is fleet-wide + institution-
+  scoped only; a mid-tier (province/RDHS) breakdown and historical trend view are natural next
+  panels once there's enough StatusLog history to make a trend meaningful.

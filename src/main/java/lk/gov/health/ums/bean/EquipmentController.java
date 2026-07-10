@@ -87,25 +87,12 @@ public class EquipmentController implements Serializable {
 
     public String statusDotClass(Equipment equipment) {
         MachineStatus status = getLatestStatus(equipment);
-        return "status-dot " + (status != null
-                ? "status-" + status.name().toLowerCase().replace('_', '-')
-                : "status-unknown");
+        return status != null ? status.dotClass() : "status-dot status-unknown";
     }
 
     public String statusLabel(Equipment equipment) {
         MachineStatus status = getLatestStatus(equipment);
-        if (status == null) {
-            return "No data yet";
-        }
-        String[] words = status.name().split("_");
-        StringBuilder label = new StringBuilder();
-        for (String word : words) {
-            if (label.length() > 0) {
-                label.append(' ');
-            }
-            label.append(word.charAt(0)).append(word.substring(1).toLowerCase());
-        }
-        return label.toString();
+        return status != null ? status.label() : "No data yet";
     }
 
     public void prepareNew() {

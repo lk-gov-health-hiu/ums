@@ -29,4 +29,17 @@ public class EquipmentFacade extends AbstractFacade<Equipment> {
                 .getResultList();
     }
 
+    public long countActive() {
+        return em.createQuery("SELECT COUNT(e) FROM Equipment e WHERE e.retired = false", Long.class)
+                .getSingleResult();
+    }
+
+    /** Active equipment with no StatusLog row at all -- never reported, distinct from "reported and down". */
+    public List<Equipment> findNeverReported() {
+        return em.createQuery(
+                "SELECT e FROM Equipment e WHERE e.retired = false "
+                + "AND e NOT IN (SELECT DISTINCT s.equipment FROM StatusLog s)", Equipment.class)
+                .getResultList();
+    }
+
 }
