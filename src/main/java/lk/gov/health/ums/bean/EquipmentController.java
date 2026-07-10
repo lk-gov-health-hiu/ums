@@ -85,14 +85,14 @@ public class EquipmentController implements Serializable {
         return log != null ? log.getStatus() : null;
     }
 
-    public String getStatusDotClass(Equipment equipment) {
+    public String statusDotClass(Equipment equipment) {
         MachineStatus status = getLatestStatus(equipment);
         return "status-dot " + (status != null
                 ? "status-" + status.name().toLowerCase().replace('_', '-')
                 : "status-unknown");
     }
 
-    public String getStatusLabel(Equipment equipment) {
+    public String statusLabel(Equipment equipment) {
         MachineStatus status = getLatestStatus(equipment);
         if (status == null) {
             return "No data yet";
