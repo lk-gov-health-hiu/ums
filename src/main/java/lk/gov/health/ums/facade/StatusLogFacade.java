@@ -77,4 +77,48 @@ public class StatusLogFacade extends AbstractFacade<StatusLog> {
                 .getResultList();
     }
 
+    /** Day-by-status submission counts since a given date — feeds the reporting-trend sparkline. */
+    public List<Object[]> countByDateAndStatusSince(LocalDate since) {
+        return em.createQuery(
+                "SELECT s.logDate, s.status, COUNT(s) FROM StatusLog s "
+                + "WHERE s.logDate >= :since GROUP BY s.logDate, s.status", Object[].class)
+                .setParameter("since", since)
+                .getResultList();
+    }
+
+    /** Same as {@link #countByDateAndStatusSince}, scoped to a given (institution-owned) equipment list. */
+    public List<Object[]> countByDateAndStatusSince(LocalDate since, List<Equipment> equipmentList) {
+        if (equipmentList.isEmpty()) {
+            return List.of();
+        }
+        return em.createQuery(
+                "SELECT s.logDate, s.status, COUNT(s) FROM StatusLog s "
+                + "WHERE s.logDate >= :since AND s.equipment IN :equipment GROUP BY s.logDate, s.status",
+                Object[].class)
+                .setParameter("since", since)
+                .setParameter("equipment", equipmentList)
+                .getResultList();
+    }
+
+    /** Every submission for one specific day — the trend sparkline's drill-in detail. */
+    public List<StatusLog> findByDate(LocalDate date) {
+        return em.createQuery(
+                "SELECT s FROM StatusLog s WHERE s.logDate = :date ORDER BY s.status", StatusLog.class)
+                .setParameter("date", date)
+                .getResultList();
+    }
+
+    /** Same as {@link #findByDate}, scoped to a given (institution-owned) equipment list. */
+    public List<StatusLog> findByDate(LocalDate date, List<Equipment> equipmentList) {
+        if (equipmentList.isEmpty()) {
+            return List.of();
+        }
+        return em.createQuery(
+                "SELECT s FROM StatusLog s WHERE s.logDate = :date AND s.equipment IN :equipment ORDER BY s.status",
+                StatusLog.class)
+                .setParameter("date", date)
+                .setParameter("equipment", equipmentList)
+                .getResultList();
+    }
+
 }

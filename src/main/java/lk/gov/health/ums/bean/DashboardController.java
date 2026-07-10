@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,12 +45,18 @@ public class DashboardController implements Serializable {
     @Inject
     private SessionController sessionController;
 
+    private static final int TREND_WINDOW_DAYS = 14;
+
     private long totalEquipment;
     private long reportedToday;
     private long neverReportedCount;
     private Map<MachineStatus, Long> statusCounts;
     private Map<MachineStatus, Integer> statusPercents;
     private List<AttentionRow> needsAttention;
+    private List<Equipment> scopedEquipment;
+    private List<TrendDay> trendDays;
+    private LocalDate selectedTrendDate;
+    private List<AttentionRow> drillInRows;
 
     @PostConstruct
     public void init() {
@@ -59,7 +66,8 @@ public class DashboardController implements Serializable {
         }
         needsAttention = new ArrayList<>();
 
-        if (sessionController.isSystemAdmin() || sessionController.isNationalUser()) {
+        boolean fleetWide = sessionController.isSystemAdmin() || sessionController.isNationalUser();
+        if (fleetWide) {
             loadNational();
         } else {
             loadInstitution();
@@ -69,6 +77,9 @@ public class DashboardController implements Serializable {
         for (MachineStatus status : MachineStatus.values()) {
             statusPercents.put(status, percentOf(statusCounts.get(status)));
         }
+
+        loadTrend(fleetWide);
+        onSelectDay(LocalDate.now());
     }
 
     private void loadNational() {
@@ -93,6 +104,7 @@ public class DashboardController implements Serializable {
         Institution institution = sessionController.getScopeInstitution();
         List<Equipment> equipment = institution != null
                 ? equipmentFacade.findActiveByInstitution(institution) : List.of();
+        scopedEquipment = equipment;
         totalEquipment = equipment.size();
 
         Set<Long> reportedEquipmentIds = new HashSet<>();
@@ -112,6 +124,44 @@ public class DashboardController implements Serializable {
                 neverReportedCount++;
                 needsAttention.add(AttentionRow.neverReported(e));
             }
+        }
+    }
+
+    private void loadTrend(boolean fleetWide) {
+        LocalDate since = LocalDate.now().minusDays(TREND_WINDOW_DAYS - 1);
+        List<Object[]> rows = fleetWide
+                ? statusLogFacade.countByDateAndStatusSince(since)
+                : statusLogFacade.countByDateAndStatusSince(since, scopedEquipment);
+
+        Map<LocalDate, Long> functioningByDate = new HashMap<>();
+        Map<LocalDate, Long> reportedByDate = new HashMap<>();
+        for (Object[] row : rows) {
+            LocalDate date = (LocalDate) row[0];
+            MachineStatus status = (MachineStatus) row[1];
+            long count = (Long) row[2];
+            reportedByDate.merge(date, count, Long::sum);
+            if (status == MachineStatus.FUNCTIONING) {
+                functioningByDate.merge(date, count, Long::sum);
+            }
+        }
+
+        trendDays = new ArrayList<>();
+        for (LocalDate date = since; !date.isAfter(LocalDate.now()); date = date.plusDays(1)) {
+            long reported = reportedByDate.getOrDefault(date, 0L);
+            long functioning = functioningByDate.getOrDefault(date, 0L);
+            trendDays.add(new TrendDay(date, reported, functioning, totalEquipment));
+        }
+    }
+
+    /** Selects a day on the trend sparkline and loads its full submission list below it. */
+    public void onSelectDay(LocalDate date) {
+        selectedTrendDate = date;
+        List<StatusLog> logs = scopedEquipment == null
+                ? statusLogFacade.findByDate(date)
+                : statusLogFacade.findByDate(date, scopedEquipment);
+        drillInRows = new ArrayList<>();
+        for (StatusLog log : logs) {
+            drillInRows.add(AttentionRow.from(log));
         }
     }
 
@@ -168,6 +218,18 @@ public class DashboardController implements Serializable {
 
     public List<AttentionRow> getNeedsAttention() {
         return needsAttention;
+    }
+
+    public List<TrendDay> getTrendDays() {
+        return trendDays;
+    }
+
+    public LocalDate getSelectedTrendDate() {
+        return selectedTrendDate;
+    }
+
+    public List<AttentionRow> getDrillInRows() {
+        return drillInRows;
     }
 
     /** One row of the "needs attention" table — either a down machine or one that has never reported. */
@@ -229,6 +291,48 @@ public class DashboardController implements Serializable {
 
         public String getLastReported() {
             return lastReported;
+        }
+    }
+
+    /** One column of the reporting-trend sparkline — a single day's submission volume. */
+    public static class TrendDay implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+        private static final DateTimeFormatter LABEL_FORMAT = DateTimeFormatter.ofPattern("dd MMM");
+
+        private final LocalDate date;
+        private final long reportedCount;
+        private final int functioningBarPercent;
+        private final int notFunctioningBarPercent;
+
+        TrendDay(LocalDate date, long reportedCount, long functioningCount, long totalEquipment) {
+            this.date = date;
+            this.reportedCount = reportedCount;
+            this.functioningBarPercent = totalEquipment > 0
+                    ? (int) Math.round(functioningCount * 100.0 / totalEquipment) : 0;
+            long notFunctioning = reportedCount - functioningCount;
+            this.notFunctioningBarPercent = totalEquipment > 0
+                    ? (int) Math.round(notFunctioning * 100.0 / totalEquipment) : 0;
+        }
+
+        public LocalDate getDate() {
+            return date;
+        }
+
+        public String getDayLabel() {
+            return date.format(LABEL_FORMAT);
+        }
+
+        public long getReportedCount() {
+            return reportedCount;
+        }
+
+        public int getFunctioningBarPercent() {
+            return functioningBarPercent;
+        }
+
+        public int getNotFunctioningBarPercent() {
+            return notFunctioningBarPercent;
         }
     }
 
