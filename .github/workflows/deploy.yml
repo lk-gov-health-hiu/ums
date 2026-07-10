@@ -1,0 +1,52 @@
+name: Deploy UMS to moh-dims
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-moh-dims-ums
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, moh-dims, ums]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17 / Maven on PATH
+        run: |
+          echo "JAVA_HOME=$HOME/jdk17" >> "$GITHUB_ENV"
+          echo "$HOME/jdk17/bin" >> "$GITHUB_PATH"
+          echo "$HOME/apache-maven-3.6.3/bin" >> "$GITHUB_PATH"
+
+      - name: Build WAR
+        run: mvn -B -q clean package -DskipTests
+
+      - name: Ensure Payara ums domain is running
+        run: |
+          ~/payara6/bin/asadmin list-domains | grep -q "^ums running" \
+            || ~/payara6/bin/asadmin start-domain ums
+
+      - name: Deploy to Payara
+        run: |
+          ~/payara6/bin/asadmin --port 4849 deploy --force=true \
+            --contextroot ums --name ums target/ums.war
+
+      - name: Smoke test
+        run: |
+          set -e
+          check() {
+            code=$(curl -sk -o /dev/null -w '%{http_code}' "$1")
+            echo "$1 -> $code"
+            [ "$code" = "200" ] || { echo "FAILED: $1 returned $code"; exit 1; }
+          }
+          check http://localhost:8081/ums/admin/login.xhtml
+          check http://localhost:8081/ums/entry/
+          check https://localhost:8181/ums/entry/
