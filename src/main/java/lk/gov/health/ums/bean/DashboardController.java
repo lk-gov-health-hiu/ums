@@ -13,6 +13,8 @@ import java.util.Comparator;
 import java.util.List;
 import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
+import lk.gov.health.ums.enums.MachineStatus;
+import lk.gov.health.ums.facade.EquipmentFacade;
 import lk.gov.health.ums.facade.EquipmentTypeFacade;
 import lk.gov.health.ums.facade.InstitutionFacade;
 import lk.gov.health.ums.facade.StatusLogFacade;
@@ -37,6 +39,8 @@ public class DashboardController implements Serializable {
     @Inject
     private StatusLogFacade statusLogFacade;
     @Inject
+    private EquipmentFacade equipmentFacade;
+    @Inject
     private EquipmentTypeFacade equipmentTypeFacade;
     @Inject
     private InstitutionFacade institutionFacade;
@@ -55,6 +59,13 @@ public class DashboardController implements Serializable {
     private List<SummaryRow> summaryRows;
     private long summaryTotal;
 
+    private long equipmentTracked;
+    private long reportedCount;
+    private int reportedPercent;
+    private long functioningCount;
+    private int functioningPercent;
+    private long needsAttentionCount;
+
     @PostConstruct
     public void init() {
         filterDate = LocalDate.now().minusDays(1);
@@ -71,11 +82,13 @@ public class DashboardController implements Serializable {
         }
 
         refreshSummary();
+        refreshKpis();
     }
 
     /** Ajax listener for the date/equipment-type/hospital filter controls. */
     public void onFilterChange() {
         refreshSummary();
+        refreshKpis();
     }
 
     private void refreshSummary() {
@@ -95,6 +108,26 @@ public class DashboardController implements Serializable {
         }
         summaryRows.sort(Comparator.comparing(SummaryRow::getLabel));
         summaryTotal = summaryRows.stream().mapToLong(SummaryRow::getCount).sum();
+    }
+
+    /**
+     * The four top-line KPI tiles, scoped to the current hospital/equipment-type filter.
+     * "Reported" and "Functioning" are for the selected date; "Needs attention" reflects each
+     * machine's latest report regardless of date, matching its Reports-page counterpart.
+     */
+    private void refreshKpis() {
+        equipmentTracked = equipmentFacade.countActive(filterHospital, filterEquipmentType);
+        reportedCount = summaryTotal;
+        reportedPercent = percentOf(reportedCount, equipmentTracked);
+        functioningCount = statusLogFacade.countReportedWithStatus(
+                filterDate, MachineStatus.FUNCTIONING, filterHospital, filterEquipmentType);
+        functioningPercent = percentOf(functioningCount, reportedCount);
+        needsAttentionCount = equipmentFacade.countNeverReported(filterHospital, filterEquipmentType)
+                + statusLogFacade.countLatestNonFunctioning(filterHospital, filterEquipmentType);
+    }
+
+    private int percentOf(long count, long total) {
+        return total > 0 ? (int) Math.round(count * 100.0 / total) : 0;
     }
 
     private List<SummaryRow> toRows(List<Object[]> rows, java.util.function.Function<Object[], String> labeler) {
@@ -175,6 +208,30 @@ public class DashboardController implements Serializable {
 
     public long getSummaryTotal() {
         return summaryTotal;
+    }
+
+    public long getEquipmentTracked() {
+        return equipmentTracked;
+    }
+
+    public long getReportedCount() {
+        return reportedCount;
+    }
+
+    public int getReportedPercent() {
+        return reportedPercent;
+    }
+
+    public long getFunctioningCount() {
+        return functioningCount;
+    }
+
+    public int getFunctioningPercent() {
+        return functioningPercent;
+    }
+
+    public long getNeedsAttentionCount() {
+        return needsAttentionCount;
     }
 
     /** One row of the context-sensitive summary — a label (equipment type or hospital name) and its count. */

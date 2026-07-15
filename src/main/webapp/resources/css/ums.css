@@ -386,6 +386,40 @@ body .ui-messages-info {
     gap: 0.35rem;
 }
 
+/* Dashboard: KPI tile row, scoped to the current filter selection */
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.kpi-tile {
+    background: var(--ums-panel);
+    border: 1px solid var(--ums-hairline);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+}
+
+.kpi-tile .kpi-value {
+    font-family: var(--ums-font-mono);
+    font-size: 1.9rem;
+    font-weight: 500;
+    color: var(--ums-ink);
+    line-height: 1.1;
+}
+
+.kpi-tile .kpi-label {
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ums-ink-muted);
+}
+
+.kpi-tile.kpi-attention .kpi-value { color: var(--ums-amber); }
+.kpi-tile.kpi-attention.kpi-zero .kpi-value { color: var(--ums-green); }
+
 /* Dashboard: context-sensitive summary (bar chart + exact-value table) */
 .summary-body {
     display: flex;

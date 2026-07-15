@@ -21,7 +21,7 @@
                         <p:outputLabel for="filterDate" value="Date"/>
                         <p:calendar id="filterDate" value="#{dashboardController.filterDate}" pattern="yyyy-MM-dd"
                                     maxdate="today">
-                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:summarySection"/>
+                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection"/>
                         </p:calendar>
                     </div>
 
@@ -31,7 +31,7 @@
                                           converter="equipmentTypeConverter">
                             <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"/>
                             <f:selectItems value="#{dashboardController.equipmentTypes}" var="t" itemLabel="#{t.name}" itemValue="#{t}"/>
-                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:summarySection"/>
+                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection"/>
                         </p:selectOneMenu>
                     </div>
 
@@ -42,10 +42,29 @@
                             <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"
                                           rendered="#{not dashboardController.hospitalFilterLocked}"/>
                             <f:selectItems value="#{dashboardController.hospitals}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
-                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:summarySection"/>
+                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection"/>
                         </p:selectOneMenu>
                     </div>
                 </div>
+
+                <h:panelGroup id="kpiSection" layout="block" styleClass="kpi-row">
+                    <div class="kpi-tile">
+                        <div class="kpi-value">#{dashboardController.equipmentTracked}</div>
+                        <div class="kpi-label">Equipment tracked</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="kpi-value">#{dashboardController.reportedPercent}%</div>
+                        <div class="kpi-label">Reported #{dashboardController.filterDate} (#{dashboardController.reportedCount}/#{dashboardController.equipmentTracked})</div>
+                    </div>
+                    <div class="kpi-tile">
+                        <div class="kpi-value">#{dashboardController.functioningPercent}%</div>
+                        <div class="kpi-label">Functioning (of reported)</div>
+                    </div>
+                    <div class="kpi-tile kpi-attention #{dashboardController.needsAttentionCount == 0 ? 'kpi-zero' : ''}">
+                        <div class="kpi-value">#{dashboardController.needsAttentionCount}</div>
+                        <div class="kpi-label">Needs attention</div>
+                    </div>
+                </h:panelGroup>
 
                 <div class="dashboard-panel">
                     <h3>Total by #{dashboardController.summaryLabelHeader}</h3>

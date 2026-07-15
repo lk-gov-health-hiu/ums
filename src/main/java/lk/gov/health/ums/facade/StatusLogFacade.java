@@ -11,6 +11,7 @@ import lk.gov.health.ums.entity.Equipment;
 import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.entity.StatusLog;
+import lk.gov.health.ums.enums.MachineStatus;
 
 @Stateless
 public class StatusLogFacade extends AbstractFacade<StatusLog> {
@@ -135,6 +136,48 @@ public class StatusLogFacade extends AbstractFacade<StatusLog> {
             query.setParameter("type", type);
         }
         return query.getResultList();
+    }
+
+    /**
+     * Distinct equipment reported with a given status on the given day, optionally scoped to
+     * one hospital and/or equipment type — feeds the dashboard's "functioning" KPI.
+     */
+    public long countReportedWithStatus(LocalDate date, MachineStatus status, Institution institution, EquipmentType type) {
+        String jpql = "SELECT COUNT(DISTINCT s.equipment) FROM StatusLog s "
+                + "WHERE s.logDate = :date AND s.status = :status"
+                + (institution != null ? " AND s.equipment.institution = :institution" : "")
+                + (type != null ? " AND s.equipment.type = :type" : "");
+        TypedQuery<Long> query = em.createQuery(jpql, Long.class)
+                .setParameter("date", date)
+                .setParameter("status", status);
+        if (institution != null) {
+            query.setParameter("institution", institution);
+        }
+        if (type != null) {
+            query.setParameter("type", type);
+        }
+        return query.getSingleResult();
+    }
+
+    /**
+     * Count of {@link #findLatestNonFunctioning}, optionally scoped to one hospital and/or
+     * equipment type — feeds the dashboard's "needs attention" KPI (current fleet state,
+     * independent of the date filter).
+     */
+    public long countLatestNonFunctioning(Institution institution, EquipmentType type) {
+        String jpql = "SELECT COUNT(s) FROM StatusLog s "
+                + "WHERE s.status <> lk.gov.health.ums.enums.MachineStatus.FUNCTIONING "
+                + "AND s.logDate = (SELECT MAX(s2.logDate) FROM StatusLog s2 WHERE s2.equipment = s.equipment)"
+                + (institution != null ? " AND s.equipment.institution = :institution" : "")
+                + (type != null ? " AND s.equipment.type = :type" : "");
+        TypedQuery<Long> query = em.createQuery(jpql, Long.class);
+        if (institution != null) {
+            query.setParameter("institution", institution);
+        }
+        if (type != null) {
+            query.setParameter("type", type);
+        }
+        return query.getSingleResult();
     }
 
     /** Every submission for one specific day — the trend sparkline's drill-in detail. */
