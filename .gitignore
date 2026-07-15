@@ -7,3 +7,4 @@ nbproject/private/
 *.iml
 .claude/
 .playwright-mcp/
+tmp/

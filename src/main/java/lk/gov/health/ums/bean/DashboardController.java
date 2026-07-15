@@ -4,31 +4,27 @@ import jakarta.annotation.PostConstruct;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import lk.gov.health.ums.entity.Equipment;
+import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
-import lk.gov.health.ums.entity.StatusLog;
-import lk.gov.health.ums.enums.MachineStatus;
-import lk.gov.health.ums.facade.EquipmentFacade;
+import lk.gov.health.ums.facade.EquipmentTypeFacade;
+import lk.gov.health.ums.facade.InstitutionFacade;
 import lk.gov.health.ums.facade.StatusLogFacade;
 
 /**
- * Fleet-wide (System Admin / National User) or institution-scoped utilisation
- * dashboard — the "not yet built" landing page from the original scaffold.
- * Panels chosen from precedent (India NHM's BEMMP facility-tier uptime/
- * functional-status views, DHIS2's reporting-completeness convention) and
- * scoped to what StatusLog already captures: latest functional status per
- * machine, today's reporting compliance, and an actionable "needs attention"
- * list (down machines + machines that have never once reported).
+ * National-level utilisation dashboard: a date/equipment-type/hospital filter
+ * bar over a single context-sensitive summary — totals by equipment type
+ * (default, or scoped to one hospital once picked) or totals by hospital
+ * (once a modality is picked with no hospital chosen). Fleet status, the
+ * reporting-trend sparkline and the needs-attention list moved to the
+ * Reports page ({@link ReportController}) — this page stays a single,
+ * filterable summary.
  *
  * @author Dr M H B Ariyaratne, buddhika.ari@gmail.com
  */
@@ -39,300 +35,167 @@ public class DashboardController implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Inject
-    private EquipmentFacade equipmentFacade;
-    @Inject
     private StatusLogFacade statusLogFacade;
+    @Inject
+    private EquipmentTypeFacade equipmentTypeFacade;
+    @Inject
+    private InstitutionFacade institutionFacade;
     @Inject
     private SessionController sessionController;
 
-    private static final int TREND_WINDOW_DAYS = 14;
+    private LocalDate filterDate;
+    private EquipmentType filterEquipmentType;
+    private Institution filterHospital;
 
-    private long totalEquipment;
-    private long reportedToday;
-    private long neverReportedCount;
-    private Map<MachineStatus, Long> statusCounts;
-    private Map<MachineStatus, Integer> statusPercents;
-    private List<AttentionRow> needsAttention;
-    private List<Equipment> scopedEquipment;
-    private List<TrendDay> trendDays;
-    private LocalDate selectedTrendDate;
-    private List<AttentionRow> drillInRows;
+    private List<EquipmentType> equipmentTypes;
+    private List<Institution> hospitals;
+    private boolean hospitalFilterLocked;
+
+    private String summaryLabelHeader;
+    private List<SummaryRow> summaryRows;
+    private long summaryTotal;
 
     @PostConstruct
     public void init() {
-        statusCounts = new EnumMap<>(MachineStatus.class);
-        for (MachineStatus status : MachineStatus.values()) {
-            statusCounts.put(status, 0L);
-        }
-        needsAttention = new ArrayList<>();
+        filterDate = LocalDate.now().minusDays(1);
+        equipmentTypes = equipmentTypeFacade.findAll();
 
-        boolean fleetWide = sessionController.isSystemAdmin() || sessionController.isNationalUser();
-        if (fleetWide) {
-            loadNational();
+        if (sessionController.isSystemAdmin() || sessionController.isNationalUser()) {
+            hospitals = institutionFacade.findAll();
+            hospitalFilterLocked = false;
         } else {
-            loadInstitution();
+            Institution own = sessionController.getScopeInstitution();
+            hospitals = own != null ? List.of(own) : List.of();
+            filterHospital = own;
+            hospitalFilterLocked = true;
         }
 
-        statusPercents = new EnumMap<>(MachineStatus.class);
-        for (MachineStatus status : MachineStatus.values()) {
-            statusPercents.put(status, percentOf(statusCounts.get(status)));
-        }
-
-        loadTrend(fleetWide);
-        onSelectDay(LocalDate.now());
+        refreshSummary();
     }
 
-    private void loadNational() {
-        totalEquipment = equipmentFacade.countActive();
-        reportedToday = statusLogFacade.countDistinctEquipmentReportedOn(LocalDate.now());
-
-        for (Object[] row : statusLogFacade.countByLatestStatus()) {
-            statusCounts.put((MachineStatus) row[0], (Long) row[1]);
-        }
-        for (StatusLog log : statusLogFacade.findLatestNonFunctioning()) {
-            needsAttention.add(AttentionRow.from(log));
-        }
-
-        List<Equipment> neverReported = equipmentFacade.findNeverReported();
-        neverReportedCount = neverReported.size();
-        for (Equipment equipment : neverReported) {
-            needsAttention.add(AttentionRow.neverReported(equipment));
-        }
+    /** Ajax listener for the date/equipment-type/hospital filter controls. */
+    public void onFilterChange() {
+        refreshSummary();
     }
 
-    private void loadInstitution() {
-        Institution institution = sessionController.getScopeInstitution();
-        List<Equipment> equipment = institution != null
-                ? equipmentFacade.findActiveByInstitution(institution) : List.of();
-        scopedEquipment = equipment;
-        totalEquipment = equipment.size();
-
-        Set<Long> reportedEquipmentIds = new HashSet<>();
-        LocalDate today = LocalDate.now();
-        for (StatusLog log : statusLogFacade.findLatestForEquipmentIn(equipment)) {
-            statusCounts.merge(log.getStatus(), 1L, Long::sum);
-            reportedEquipmentIds.add(log.getEquipment().getId());
-            if (log.getLogDate().equals(today)) {
-                reportedToday++;
-            }
-            if (log.getStatus() != MachineStatus.FUNCTIONING) {
-                needsAttention.add(AttentionRow.from(log));
-            }
+    private void refreshSummary() {
+        List<Object[]> rows;
+        if (filterHospital != null) {
+            summaryLabelHeader = "Equipment Type";
+            rows = statusLogFacade.countReportedByType(filterDate, filterHospital);
+            summaryRows = toRows(rows, row -> typeLabel((EquipmentType) row[0]));
+        } else if (filterEquipmentType != null) {
+            summaryLabelHeader = "Hospital";
+            rows = statusLogFacade.countReportedByInstitution(filterDate, filterEquipmentType);
+            summaryRows = toRows(rows, row -> institutionLabel((Institution) row[0]));
+        } else {
+            summaryLabelHeader = "Equipment Type";
+            rows = statusLogFacade.countReportedByType(filterDate, null);
+            summaryRows = toRows(rows, row -> typeLabel((EquipmentType) row[0]));
         }
-        for (Equipment e : equipment) {
-            if (!reportedEquipmentIds.contains(e.getId())) {
-                neverReportedCount++;
-                needsAttention.add(AttentionRow.neverReported(e));
-            }
-        }
+        summaryRows.sort(Comparator.comparing(SummaryRow::getLabel));
+        summaryTotal = summaryRows.stream().mapToLong(SummaryRow::getCount).sum();
     }
 
-    private void loadTrend(boolean fleetWide) {
-        LocalDate since = LocalDate.now().minusDays(TREND_WINDOW_DAYS - 1);
-        List<Object[]> rows = fleetWide
-                ? statusLogFacade.countByDateAndStatusSince(since)
-                : statusLogFacade.countByDateAndStatusSince(since, scopedEquipment);
-
-        Map<LocalDate, Long> functioningByDate = new HashMap<>();
-        Map<LocalDate, Long> reportedByDate = new HashMap<>();
+    private List<SummaryRow> toRows(List<Object[]> rows, java.util.function.Function<Object[], String> labeler) {
+        List<SummaryRow> result = new ArrayList<>();
         for (Object[] row : rows) {
-            LocalDate date = (LocalDate) row[0];
-            MachineStatus status = (MachineStatus) row[1];
-            long count = (Long) row[2];
-            reportedByDate.merge(date, count, Long::sum);
-            if (status == MachineStatus.FUNCTIONING) {
-                functioningByDate.merge(date, count, Long::sum);
-            }
+            result.add(new SummaryRow(labeler.apply(row), (Long) row[1]));
         }
+        return result;
+    }
 
-        trendDays = new ArrayList<>();
-        for (LocalDate date = since; !date.isAfter(LocalDate.now()); date = date.plusDays(1)) {
-            long reported = reportedByDate.getOrDefault(date, 0L);
-            long functioning = functioningByDate.getOrDefault(date, 0L);
-            trendDays.add(new TrendDay(date, reported, functioning, totalEquipment));
+    private String typeLabel(EquipmentType type) {
+        return type != null ? type.getName() : "—";
+    }
+
+    private String institutionLabel(Institution institution) {
+        return institution != null ? institution.getName() : "—";
+    }
+
+    /** JSON payload (`{categories:[...], data:[...]}`) for the ECharts bar chart. */
+    public String getSummaryChartJson() {
+        JsonArrayBuilder categories = Json.createArrayBuilder();
+        JsonArrayBuilder data = Json.createArrayBuilder();
+        for (SummaryRow row : summaryRows) {
+            categories.add(row.getLabel());
+            data.add(row.getCount());
         }
+        String json = Json.createObjectBuilder()
+                .add("categories", categories)
+                .add("data", data)
+                .build()
+                .toString();
+        return json.replace("</", "<\\/");
     }
 
-    /** Selects a day on the trend sparkline and loads its full submission list below it. */
-    public void onSelectDay(LocalDate date) {
-        selectedTrendDate = date;
-        List<StatusLog> logs = scopedEquipment == null
-                ? statusLogFacade.findByDate(date)
-                : statusLogFacade.findByDate(date, scopedEquipment);
-        drillInRows = new ArrayList<>();
-        for (StatusLog log : logs) {
-            drillInRows.add(AttentionRow.from(log));
-        }
+    public LocalDate getFilterDate() {
+        return filterDate;
     }
 
-    private int percentOf(long count) {
-        return totalEquipment > 0 ? (int) Math.round(count * 100.0 / totalEquipment) : 0;
+    public void setFilterDate(LocalDate filterDate) {
+        this.filterDate = filterDate;
     }
 
-    public long getTotalEquipment() {
-        return totalEquipment;
+    public EquipmentType getFilterEquipmentType() {
+        return filterEquipmentType;
     }
 
-    public long getReportedToday() {
-        return reportedToday;
+    public void setFilterEquipmentType(EquipmentType filterEquipmentType) {
+        this.filterEquipmentType = filterEquipmentType;
     }
 
-    public int getReportingRatePercent() {
-        return percentOf(reportedToday);
+    public Institution getFilterHospital() {
+        return filterHospital;
     }
 
-    public long getNeverReportedCount() {
-        return neverReportedCount;
+    public void setFilterHospital(Institution filterHospital) {
+        this.filterHospital = filterHospital;
     }
 
-    public int getNeverReportedPercent() {
-        return percentOf(neverReportedCount);
+    public List<EquipmentType> getEquipmentTypes() {
+        return equipmentTypes;
     }
 
-    public long getNeedsAttentionCount() {
-        return needsAttention.size();
+    public List<Institution> getHospitals() {
+        return hospitals;
     }
 
-    public int getFunctioningPercent() {
-        return statusPercents.getOrDefault(MachineStatus.FUNCTIONING, 0);
+    public boolean isHospitalFilterLocked() {
+        return hospitalFilterLocked;
     }
 
-    public Map<MachineStatus, Long> getStatusCounts() {
-        return statusCounts;
+    public String getSummaryLabelHeader() {
+        return summaryLabelHeader;
     }
 
-    public Map<MachineStatus, Integer> getStatusPercents() {
-        return statusPercents;
+    public List<SummaryRow> getSummaryRows() {
+        return summaryRows;
     }
 
-    /** Only the statuses with at least one machine in them — keeps the bar/legend free of empty slivers. */
-    public List<MachineStatus> getPresentStatuses() {
-        List<MachineStatus> present = new ArrayList<>();
-        for (MachineStatus status : MachineStatus.values()) {
-            if (statusCounts.get(status) > 0) {
-                present.add(status);
-            }
-        }
-        return present;
+    public long getSummaryTotal() {
+        return summaryTotal;
     }
 
-    public List<AttentionRow> getNeedsAttention() {
-        return needsAttention;
-    }
-
-    public List<TrendDay> getTrendDays() {
-        return trendDays;
-    }
-
-    public LocalDate getSelectedTrendDate() {
-        return selectedTrendDate;
-    }
-
-    public List<AttentionRow> getDrillInRows() {
-        return drillInRows;
-    }
-
-    /** One row of the "needs attention" table — either a down machine or one that has never reported. */
-    public static class AttentionRow implements Serializable {
+    /** One row of the context-sensitive summary — a label (equipment type or hospital name) and its count. */
+    public static class SummaryRow implements Serializable {
 
         private static final long serialVersionUID = 1L;
-        private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
-        private String equipmentTypeName;
-        private String institutionName;
-        private String location;
-        private String statusLabel;
-        private String statusDotClass;
-        private String lastReported;
+        private final String label;
+        private final long count;
 
-        static AttentionRow from(StatusLog log) {
-            AttentionRow row = new AttentionRow();
-            row.fillEquipmentFields(log.getEquipment());
-            row.statusLabel = log.getStatus().label();
-            row.statusDotClass = log.getStatus().dotClass();
-            row.lastReported = log.getLogDate().format(DATE_FORMAT);
-            return row;
+        SummaryRow(String label, long count) {
+            this.label = label;
+            this.count = count;
         }
 
-        static AttentionRow neverReported(Equipment equipment) {
-            AttentionRow row = new AttentionRow();
-            row.fillEquipmentFields(equipment);
-            row.statusLabel = "Never reported";
-            row.statusDotClass = "status-dot status-unknown";
-            row.lastReported = "—";
-            return row;
+        public String getLabel() {
+            return label;
         }
 
-        private void fillEquipmentFields(Equipment equipment) {
-            this.equipmentTypeName = equipment.getType() != null ? equipment.getType().getName() : "—";
-            this.institutionName = equipment.getInstitution() != null ? equipment.getInstitution().getName() : "—";
-            this.location = equipment.getLocation();
-        }
-
-        public String getEquipmentTypeName() {
-            return equipmentTypeName;
-        }
-
-        public String getInstitutionName() {
-            return institutionName;
-        }
-
-        public String getLocation() {
-            return location;
-        }
-
-        public String getStatusLabel() {
-            return statusLabel;
-        }
-
-        public String getStatusDotClass() {
-            return statusDotClass;
-        }
-
-        public String getLastReported() {
-            return lastReported;
-        }
-    }
-
-    /** One column of the reporting-trend sparkline — a single day's submission volume. */
-    public static class TrendDay implements Serializable {
-
-        private static final long serialVersionUID = 1L;
-        private static final DateTimeFormatter LABEL_FORMAT = DateTimeFormatter.ofPattern("dd MMM");
-
-        private final LocalDate date;
-        private final long reportedCount;
-        private final int functioningBarPercent;
-        private final int notFunctioningBarPercent;
-
-        TrendDay(LocalDate date, long reportedCount, long functioningCount, long totalEquipment) {
-            this.date = date;
-            this.reportedCount = reportedCount;
-            this.functioningBarPercent = totalEquipment > 0
-                    ? (int) Math.round(functioningCount * 100.0 / totalEquipment) : 0;
-            long notFunctioning = reportedCount - functioningCount;
-            this.notFunctioningBarPercent = totalEquipment > 0
-                    ? (int) Math.round(notFunctioning * 100.0 / totalEquipment) : 0;
-        }
-
-        public LocalDate getDate() {
-            return date;
-        }
-
-        public String getDayLabel() {
-            return date.format(LABEL_FORMAT);
-        }
-
-        public long getReportedCount() {
-            return reportedCount;
-        }
-
-        public int getFunctioningBarPercent() {
-            return functioningBarPercent;
-        }
-
-        public int getNotFunctioningBarPercent() {
-            return notFunctioningBarPercent;
+        public long getCount() {
+            return count;
         }
     }
 

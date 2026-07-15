@@ -11,126 +11,96 @@
         </h:panelGroup>
 
         <h:panelGroup rendered="#{sessionController.loggedIn}">
+            <h:outputScript library="js" name="echarts.min.js" target="head"/>
+
             <h2>Dashboard</h2>
 
             <h:form id="dashboardForm">
-                <div class="kpi-row">
-                    <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.totalEquipment}</div>
-                        <div class="kpi-label">Equipment tracked</div>
+                <div class="dashboard-filters">
+                    <div class="filter-field">
+                        <p:outputLabel for="filterDate" value="Date"/>
+                        <p:calendar id="filterDate" value="#{dashboardController.filterDate}" pattern="yyyy-MM-dd"
+                                    maxdate="today">
+                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:summarySection"/>
+                        </p:calendar>
                     </div>
-                    <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.reportingRatePercent}%</div>
-                        <div class="kpi-label">Reported today (#{dashboardController.reportedToday}/#{dashboardController.totalEquipment})</div>
+
+                    <div class="filter-field">
+                        <p:outputLabel for="filterType" value="Equipment"/>
+                        <p:selectOneMenu id="filterType" value="#{dashboardController.filterEquipmentType}"
+                                          converter="equipmentTypeConverter">
+                            <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"/>
+                            <f:selectItems value="#{dashboardController.equipmentTypes}" var="t" itemLabel="#{t.name}" itemValue="#{t}"/>
+                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:summarySection"/>
+                        </p:selectOneMenu>
                     </div>
-                    <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.functioningPercent}%</div>
-                        <div class="kpi-label">Functioning</div>
-                    </div>
-                    <div class="kpi-tile kpi-attention #{dashboardController.needsAttentionCount == 0 ? 'kpi-zero' : ''}">
-                        <div class="kpi-value">#{dashboardController.needsAttentionCount}</div>
-                        <div class="kpi-label">Needs attention</div>
+
+                    <div class="filter-field">
+                        <p:outputLabel for="filterHospital" value="Hospital"/>
+                        <p:selectOneMenu id="filterHospital" value="#{dashboardController.filterHospital}"
+                                          converter="institutionConverter" disabled="#{dashboardController.hospitalFilterLocked}">
+                            <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"
+                                          rendered="#{not dashboardController.hospitalFilterLocked}"/>
+                            <f:selectItems value="#{dashboardController.hospitals}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
+                            <p:ajax listener="#{dashboardController.onFilterChange}" update=":dashboardForm:summarySection"/>
+                        </p:selectOneMenu>
                     </div>
                 </div>
 
                 <div class="dashboard-panel">
-                    <h3>Fleet status</h3>
+                    <h3>Total by #{dashboardController.summaryLabelHeader}</h3>
+                    <p class="panel-caption">Equipment reported on #{dashboardController.filterDate}.</p>
 
-                    <div class="status-bar">
-                        <ui:repeat value="#{dashboardController.presentStatuses}" var="status">
-                            <div class="status-bar-segment #{status.segClass()}"
-                                 style="width:#{dashboardController.statusPercents[status]}%"/>
-                        </ui:repeat>
-                        <h:panelGroup layout="block" styleClass="status-bar-segment seg-never-reported"
-                                      style="width:#{dashboardController.neverReportedPercent}%"
-                                      rendered="#{dashboardController.neverReportedCount > 0}"/>
-                    </div>
-
-                    <div class="status-legend">
-                        <ui:repeat value="#{dashboardController.presentStatuses}" var="status">
-                            <span class="legend-item">
-                                <span class="legend-swatch #{status.segClass()}"/>
-                                #{status.label()} — #{dashboardController.statusCounts[status]} (#{dashboardController.statusPercents[status]}%)
-                            </span>
-                        </ui:repeat>
-                        <h:panelGroup styleClass="legend-item" rendered="#{dashboardController.neverReportedCount > 0}">
-                            <span class="legend-swatch seg-never-reported"/>
-                            Never reported — #{dashboardController.neverReportedCount} (#{dashboardController.neverReportedPercent}%)
+                    <h:panelGroup id="summarySection" layout="block">
+                        <h:panelGroup rendered="#{empty dashboardController.summaryRows}">
+                            <p>No submissions were recorded for this selection.</p>
                         </h:panelGroup>
-                    </div>
-                </div>
 
-                <div class="dashboard-panel">
-                    <h3>Reporting trend</h3>
-                    <p class="panel-caption">Last 14 days. Click a day to see what was submitted.</p>
+                        <h:panelGroup layout="block" styleClass="summary-body" rendered="#{not empty dashboardController.summaryRows}">
+                            <div id="summaryChart" class="summary-chart"/>
+                            <script type="text/javascript">
+                                (function () {
+                                    var el = document.getElementById('summaryChart');
+                                    if (!el) { return; }
+                                    var payload = #{dashboardController.summaryChartJson};
+                                    var chart = echarts.getInstanceByDom(el) || echarts.init(el);
+                                    chart.setOption({
+                                        grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
+                                        xAxis: { type: 'value', axisLabel: { color: '#8fa3ac' }, splitLine: { lineStyle: { color: '#2e3a40' } } },
+                                        yAxis: { type: 'category', data: payload.categories, axisLabel: { color: '#e7edf0' } },
+                                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                                        series: [{
+                                            type: 'bar',
+                                            data: payload.data,
+                                            itemStyle: { color: '#4fc3d9', borderRadius: [0, 3, 3, 0] },
+                                            label: { show: true, position: 'right', color: '#e7edf0' }
+                                        }]
+                                    }, true);
+                                    chart.resize();
+                                    if (!window.umsChartResizeBound) {
+                                        window.umsChartResizeBound = true;
+                                        window.addEventListener('resize', function () {
+                                            var node = document.getElementById('summaryChart');
+                                            var inst = node &amp;&amp; echarts.getInstanceByDom(node);
+                                            if (inst) { inst.resize(); }
+                                        });
+                                    }
+                                })();
+                            </script>
 
-                    <h:panelGroup id="trendSection" layout="block">
-                        <div class="trend-row">
-                            <ui:repeat value="#{dashboardController.trendDays}" var="day">
-                                <p:commandLink actionListener="#{dashboardController.onSelectDay(day.date)}"
-                                                update="dashboardForm:trendSection"
-                                                styleClass="trend-day #{day.date == dashboardController.selectedTrendDate ? 'trend-day-selected' : ''}">
-                                    <div class="trend-bar">
-                                        <div class="trend-seg trend-seg-not-functioning" style="height:#{day.notFunctioningBarPercent}%"/>
-                                        <div class="trend-seg trend-seg-functioning" style="height:#{day.functioningBarPercent}%"/>
-                                    </div>
-                                    <span class="trend-label">#{day.dayLabel}</span>
-                                </p:commandLink>
-                            </ui:repeat>
-                        </div>
-
-                        <div class="dashboard-panel">
-                            <h4><h:outputText value="#{dashboardController.selectedTrendDate}"/></h4>
-
-                            <h:panelGroup rendered="#{empty dashboardController.drillInRows}">
-                                <p>No submissions were recorded on this day.</p>
-                            </h:panelGroup>
-
-                            <p:dataTable value="#{dashboardController.drillInRows}" var="row" paginator="true" rows="20"
-                                         rendered="#{not empty dashboardController.drillInRows}">
-                                <p:column headerText="Type">
-                                    <h:outputText value="#{row.equipmentTypeName}"/>
+                            <p:dataTable value="#{dashboardController.summaryRows}" var="row" styleClass="summary-table">
+                                <p:column headerText="#{dashboardController.summaryLabelHeader}">
+                                    <h:outputText value="#{row.label}"/>
                                 </p:column>
-                                <p:column headerText="Institution">
-                                    <h:outputText value="#{row.institutionName}"/>
+                                <p:column headerText="Count" style="text-align:right">
+                                    <h:outputText styleClass="ums-mono" value="#{row.count}"/>
                                 </p:column>
-                                <p:column headerText="Location">
-                                    <h:outputText value="#{row.location}"/>
-                                </p:column>
-                                <p:column headerText="Status">
-                                    <span class="#{row.statusDotClass}">#{row.statusLabel}</span>
-                                </p:column>
+                                <f:facet name="footer">
+                                    <div class="summary-total">Total — <span class="ums-mono">#{dashboardController.summaryTotal}</span></div>
+                                </f:facet>
                             </p:dataTable>
-                        </div>
+                        </h:panelGroup>
                     </h:panelGroup>
-                </div>
-
-                <div class="dashboard-panel">
-                    <h3>Needs attention</h3>
-                    <p class="panel-caption">Down, awaiting parts, idle, or never reported.</p>
-
-                    <h:panelGroup rendered="#{dashboardController.needsAttentionCount == 0}">
-                        <p>Nothing needs attention right now.</p>
-                    </h:panelGroup>
-
-                    <p:dataTable value="#{dashboardController.needsAttention}" var="row" paginator="true" rows="20"
-                                 rendered="#{dashboardController.needsAttentionCount > 0}">
-                        <p:column headerText="Type">
-                            <h:outputText value="#{row.equipmentTypeName}"/>
-                        </p:column>
-                        <p:column headerText="Institution">
-                            <h:outputText value="#{row.institutionName}"/>
-                        </p:column>
-                        <p:column headerText="Location">
-                            <h:outputText value="#{row.location}"/>
-                        </p:column>
-                        <p:column headerText="Status">
-                            <span class="#{row.statusDotClass}">#{row.statusLabel}</span>
-                        </p:column>
-                        <p:column headerText="Last Reported">
-                            <h:outputText styleClass="ums-mono" value="#{row.lastReported}"/>
-                        </p:column>
-                    </p:dataTable>
                 </div>
             </h:form>
         </h:panelGroup>

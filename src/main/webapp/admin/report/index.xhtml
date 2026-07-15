@@ -1,0 +1,143 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h:panelGroup rendered="#{not sessionController.loggedIn}">
+            <h2>Reports</h2>
+            <p>Please <h:link outcome="/admin/login.xhtml" value="sign in"/>.</p>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{sessionController.loggedIn}">
+            <h2>Reports</h2>
+
+            <h:form id="reportForm">
+                <div class="reports-layout">
+                    <nav class="reports-nav">
+                        <p:commandLink actionListener="#{reportController.selectReport('FLEET_STATUS')}"
+                                        update=":reportForm:reportContent"
+                                        styleClass="reports-nav-item #{reportController.selectedReport == 'FLEET_STATUS' ? 'reports-nav-item-active' : ''}">
+                            <i class="pi pi-server"/> Fleet Status
+                        </p:commandLink>
+                        <p:commandLink actionListener="#{reportController.selectReport('REPORTING_TREND')}"
+                                        update=":reportForm:reportContent"
+                                        styleClass="reports-nav-item #{reportController.selectedReport == 'REPORTING_TREND' ? 'reports-nav-item-active' : ''}">
+                            <i class="pi pi-chart-line"/> Reporting Trend
+                        </p:commandLink>
+                        <p:commandLink actionListener="#{reportController.selectReport('NEEDS_ATTENTION')}"
+                                        update=":reportForm:reportContent"
+                                        styleClass="reports-nav-item #{reportController.selectedReport == 'NEEDS_ATTENTION' ? 'reports-nav-item-active' : ''}">
+                            <i class="pi pi-exclamation-triangle"/> Needs Attention
+                        </p:commandLink>
+                    </nav>
+
+                    <h:panelGroup id="reportContent" layout="block" styleClass="reports-content">
+
+                        <div class="dashboard-panel" rendered="#{reportController.selectedReport == 'FLEET_STATUS'}">
+                            <h3>Fleet status</h3>
+
+                            <div class="status-bar">
+                                <ui:repeat value="#{reportController.presentStatuses}" var="status">
+                                    <div class="status-bar-segment #{status.segClass()}"
+                                         style="width:#{reportController.statusPercents[status]}%"/>
+                                </ui:repeat>
+                                <h:panelGroup layout="block" styleClass="status-bar-segment seg-never-reported"
+                                              style="width:#{reportController.neverReportedPercent}%"
+                                              rendered="#{reportController.neverReportedCount > 0}"/>
+                            </div>
+
+                            <div class="status-legend">
+                                <ui:repeat value="#{reportController.presentStatuses}" var="status">
+                                    <span class="legend-item">
+                                        <span class="legend-swatch #{status.segClass()}"/>
+                                        #{status.label()} — #{reportController.statusCounts[status]} (#{reportController.statusPercents[status]}%)
+                                    </span>
+                                </ui:repeat>
+                                <h:panelGroup styleClass="legend-item" rendered="#{reportController.neverReportedCount > 0}">
+                                    <span class="legend-swatch seg-never-reported"/>
+                                    Never reported — #{reportController.neverReportedCount} (#{reportController.neverReportedPercent}%)
+                                </h:panelGroup>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-panel" rendered="#{reportController.selectedReport == 'REPORTING_TREND'}">
+                            <h3>Reporting trend</h3>
+                            <p class="panel-caption">Last 14 days. Click a day to see what was submitted.</p>
+
+                            <h:panelGroup id="trendSection" layout="block">
+                                <div class="trend-row">
+                                    <ui:repeat value="#{reportController.trendDays}" var="day">
+                                        <p:commandLink actionListener="#{reportController.onSelectDay(day.date)}"
+                                                        update=":reportForm:trendSection"
+                                                        styleClass="trend-day #{day.date == reportController.selectedTrendDate ? 'trend-day-selected' : ''}">
+                                            <div class="trend-bar">
+                                                <div class="trend-seg trend-seg-not-functioning" style="height:#{day.notFunctioningBarPercent}%"/>
+                                                <div class="trend-seg trend-seg-functioning" style="height:#{day.functioningBarPercent}%"/>
+                                            </div>
+                                            <span class="trend-label">#{day.dayLabel}</span>
+                                        </p:commandLink>
+                                    </ui:repeat>
+                                </div>
+
+                                <div class="dashboard-panel">
+                                    <h4><h:outputText value="#{reportController.selectedTrendDate}"/></h4>
+
+                                    <h:panelGroup rendered="#{empty reportController.drillInRows}">
+                                        <p>No submissions were recorded on this day.</p>
+                                    </h:panelGroup>
+
+                                    <p:dataTable value="#{reportController.drillInRows}" var="row" paginator="true" rows="20"
+                                                 rendered="#{not empty reportController.drillInRows}">
+                                        <p:column headerText="Type">
+                                            <h:outputText value="#{row.equipmentTypeName}"/>
+                                        </p:column>
+                                        <p:column headerText="Institution">
+                                            <h:outputText value="#{row.institutionName}"/>
+                                        </p:column>
+                                        <p:column headerText="Location">
+                                            <h:outputText value="#{row.location}"/>
+                                        </p:column>
+                                        <p:column headerText="Status">
+                                            <span class="#{row.statusDotClass}">#{row.statusLabel}</span>
+                                        </p:column>
+                                    </p:dataTable>
+                                </div>
+                            </h:panelGroup>
+                        </div>
+
+                        <div class="dashboard-panel" rendered="#{reportController.selectedReport == 'NEEDS_ATTENTION'}">
+                            <h3>Needs attention</h3>
+                            <p class="panel-caption">Down, awaiting parts, idle, or never reported.</p>
+
+                            <h:panelGroup rendered="#{reportController.needsAttentionCount == 0}">
+                                <p>Nothing needs attention right now.</p>
+                            </h:panelGroup>
+
+                            <p:dataTable value="#{reportController.needsAttention}" var="row" paginator="true" rows="20"
+                                         rendered="#{reportController.needsAttentionCount > 0}">
+                                <p:column headerText="Type">
+                                    <h:outputText value="#{row.equipmentTypeName}"/>
+                                </p:column>
+                                <p:column headerText="Institution">
+                                    <h:outputText value="#{row.institutionName}"/>
+                                </p:column>
+                                <p:column headerText="Location">
+                                    <h:outputText value="#{row.location}"/>
+                                </p:column>
+                                <p:column headerText="Status">
+                                    <span class="#{row.statusDotClass}">#{row.statusLabel}</span>
+                                </p:column>
+                                <p:column headerText="Last Reported">
+                                    <h:outputText styleClass="ums-mono" value="#{row.lastReported}"/>
+                                </p:column>
+                            </p:dataTable>
+                        </div>
+
+                    </h:panelGroup>
+                </div>
+            </h:form>
+        </h:panelGroup>
+    </ui:define>
+</ui:composition>

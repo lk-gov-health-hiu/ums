@@ -1,9 +1,14 @@
 # Project Preferences
 
 ## Build & Run
-- The user prefers to compile and run the application themselves
-- Do not attempt to run maven compile, build, or deploy commands
-- If there are errors, the user will report them
+- By default, the user prefers to compile and run the application themselves —
+  do not attempt maven compile/build/deploy commands unprompted.
+- Exception: if the user explicitly says to compile/build/deploy in the moment (e.g. "compile
+  this", "ok, deploy"), go ahead for that request. This is per-instance authorization, not a
+  standing green light — still don't do it unprompted afterwards.
+- If there are errors, report them back rather than guessing at environment fixes (JDK
+  switches, installing tooling, editing PATH/JAVA_HOME) — the user's own build setup may
+  differ from what's on this machine.
 
 ## Project Info
 - Utilisation Monitoring System (UMS) — tracks medical equipment (CT/MRI/PET/...) utilisation

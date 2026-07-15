@@ -4,9 +4,12 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import java.time.LocalDate;
 import java.util.List;
 import lk.gov.health.ums.entity.Equipment;
+import lk.gov.health.ums.entity.EquipmentType;
+import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.entity.StatusLog;
 
 @Stateless
@@ -98,6 +101,40 @@ public class StatusLogFacade extends AbstractFacade<StatusLog> {
                 .setParameter("since", since)
                 .setParameter("equipment", equipmentList)
                 .getResultList();
+    }
+
+    /**
+     * Distinct equipment reported on the given day, grouped by equipment type and
+     * optionally scoped to one hospital — the national dashboard's "total by
+     * equipment" summary (whole fleet, or one hospital's fleet).
+     */
+    public List<Object[]> countReportedByType(LocalDate date, Institution institution) {
+        String jpql = "SELECT s.equipment.type, COUNT(DISTINCT s.equipment) FROM StatusLog s "
+                + "WHERE s.logDate = :date"
+                + (institution != null ? " AND s.equipment.institution = :institution" : "")
+                + " GROUP BY s.equipment.type";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class).setParameter("date", date);
+        if (institution != null) {
+            query.setParameter("institution", institution);
+        }
+        return query.getResultList();
+    }
+
+    /**
+     * Distinct equipment reported on the given day, grouped by hospital and
+     * optionally scoped to one equipment type — the national dashboard's
+     * "total by hospital" summary when a modality filter is active.
+     */
+    public List<Object[]> countReportedByInstitution(LocalDate date, EquipmentType type) {
+        String jpql = "SELECT s.equipment.institution, COUNT(DISTINCT s.equipment) FROM StatusLog s "
+                + "WHERE s.logDate = :date"
+                + (type != null ? " AND s.equipment.type = :type" : "")
+                + " GROUP BY s.equipment.institution";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class).setParameter("date", date);
+        if (type != null) {
+            query.setParameter("type", type);
+        }
+        return query.getResultList();
     }
 
     /** Every submission for one specific day — the trend sparkline's drill-in detail. */

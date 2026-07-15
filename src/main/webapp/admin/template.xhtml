@@ -17,6 +17,8 @@
             <p:menubar>
                 <p:menuitem value="Home" outcome="/admin/index.xhtml" icon="pi pi-home"
                             rendered="#{sessionController.loggedIn}"/>
+                <p:menuitem value="Reports" outcome="/admin/report/index.xhtml" icon="pi pi-chart-bar"
+                            rendered="#{sessionController.loggedIn}"/>
                 <p:menuitem value="Institutions" outcome="/admin/institution/list.xhtml" icon="pi pi-building"
                             rendered="#{sessionController.canManageMasterData()}"/>
                 <p:menuitem value="Equipment Types" outcome="/admin/equipmentType/list.xhtml" icon="pi pi-list"

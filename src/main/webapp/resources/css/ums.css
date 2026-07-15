@@ -367,39 +367,94 @@ body .ui-messages-info {
     }
 }
 
-/* Dashboard: KPI tile row */
-.kpi-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.kpi-tile {
+/* Dashboard: filter bar (date / equipment / hospital) */
+.dashboard-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    align-items: flex-end;
     background: var(--ums-panel);
     border: 1px solid var(--ums-hairline);
     border-radius: 8px;
     padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
-.kpi-tile .kpi-value {
-    font-family: var(--ums-font-mono);
-    font-size: 1.9rem;
-    font-weight: 500;
+.filter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+/* Dashboard: context-sensitive summary (bar chart + exact-value table) */
+.summary-body {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.summary-chart {
+    flex: 1 1 380px;
+    min-width: 320px;
+    height: 320px;
+}
+
+.summary-table {
+    flex: 1 1 320px;
+    min-width: 280px;
+}
+
+.summary-total {
+    font-family: var(--ums-font-display);
+    font-weight: 700;
     color: var(--ums-ink);
-    line-height: 1.1;
 }
 
-.kpi-tile .kpi-label {
-    margin-top: 0.35rem;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+/* Reports page: left nav + single content pane, swapped by ajax */
+.reports-layout {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.reports-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 0 0 200px;
+    background: var(--ums-panel);
+    border: 1px solid var(--ums-hairline);
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+body a.reports-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 6px;
+    text-decoration: none;
     color: var(--ums-ink-muted);
+    font-weight: 500;
 }
 
-.kpi-tile.kpi-attention .kpi-value { color: var(--ums-amber); }
-.kpi-tile.kpi-attention.kpi-zero .kpi-value { color: var(--ums-green); }
+body a.reports-nav-item:hover {
+    background: var(--ums-cyan-dim);
+    color: var(--ums-ink);
+}
+
+body a.reports-nav-item.reports-nav-item-active {
+    background: var(--ums-panel-alt);
+    color: var(--ums-ink);
+    box-shadow: inset 0 0 0 1px var(--ums-cyan);
+}
+
+.reports-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
 
 /* Dashboard: fleet status stacked bar + legend (part-to-whole; donut avoided
    per the dataviz convention that a stacked bar carries this job better) */
