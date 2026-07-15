@@ -150,31 +150,6 @@
                                     }
                                 })();
                             </script>
-
-                            <p:dataTable value="#{dashboardController.summaryRows}" var="row" styleClass="summary-table">
-                                <p:column headerText="#{dashboardController.summaryLabelHeader}">
-                                    <h:outputText value="#{row.label}"/>
-                                    <f:facet name="footer">Total</f:facet>
-                                </p:column>
-                                <p:column headerText="Equipment" style="text-align:right">
-                                    <h:outputText styleClass="ums-mono" value="#{row.equipmentCount}"/>
-                                    <f:facet name="footer">
-                                        <span class="ums-mono">#{dashboardController.equipmentTotal}</span>
-                                    </f:facet>
-                                </p:column>
-                                <p:column headerText="Reported" style="text-align:right">
-                                    <h:outputText styleClass="ums-mono" value="#{row.reportedCount}"/>
-                                    <f:facet name="footer">
-                                        <span class="ums-mono">#{dashboardController.summaryTotal}</span>
-                                    </f:facet>
-                                </p:column>
-                                <p:column headerText="Scans" style="text-align:right">
-                                    <h:outputText styleClass="ums-mono" value="#{row.scanCount}"/>
-                                    <f:facet name="footer">
-                                        <span class="ums-mono">#{dashboardController.scansTotal}</span>
-                                    </f:facet>
-                                </p:column>
-                            </p:dataTable>
                         </h:panelGroup>
                     </h:panelGroup>
                 </div>
