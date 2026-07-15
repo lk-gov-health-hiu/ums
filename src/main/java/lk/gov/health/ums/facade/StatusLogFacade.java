@@ -168,6 +168,35 @@ public class StatusLogFacade extends AbstractFacade<StatusLog> {
     }
 
     /**
+     * Daily procedure-count sums since a date, grouped by equipment type and optionally scoped to
+     * one hospital — feeds the dashboard's scan-volume trend chart (bucketed into months in Java).
+     */
+    public List<Object[]> sumProcedureCountByDateAndType(LocalDate since, Institution institution) {
+        String jpql = "SELECT s.logDate, s.equipment.type, COALESCE(SUM(s.procedureCount), 0) FROM StatusLog s "
+                + "WHERE s.logDate >= :since"
+                + (institution != null ? " AND s.equipment.institution = :institution" : "")
+                + " GROUP BY s.logDate, s.equipment.type";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class).setParameter("since", since);
+        if (institution != null) {
+            query.setParameter("institution", institution);
+        }
+        return query.getResultList();
+    }
+
+    /** Same as {@link #sumProcedureCountByDateAndType}, grouped by hospital and optionally scoped to one equipment type. */
+    public List<Object[]> sumProcedureCountByDateAndInstitution(LocalDate since, EquipmentType type) {
+        String jpql = "SELECT s.logDate, s.equipment.institution, COALESCE(SUM(s.procedureCount), 0) FROM StatusLog s "
+                + "WHERE s.logDate >= :since"
+                + (type != null ? " AND s.equipment.type = :type" : "")
+                + " GROUP BY s.logDate, s.equipment.institution";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class).setParameter("since", since);
+        if (type != null) {
+            query.setParameter("type", type);
+        }
+        return query.getResultList();
+    }
+
+    /**
      * Distinct equipment reported with a given status on the given day, optionally scoped to
      * one hospital and/or equipment type — feeds the dashboard's "functioning" KPI.
      */

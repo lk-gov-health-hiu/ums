@@ -447,6 +447,12 @@ body .ui-messages-info {
     height: 340px;
 }
 
+/* Dashboard: 12-month scan-volume trend (multi-line, folds long tails into "Other") */
+.trend-chart {
+    width: 100%;
+    height: 360px;
+}
+
 /* Reports page: left nav + single content pane, swapped by ajax */
 .reports-layout {
     display: flex;

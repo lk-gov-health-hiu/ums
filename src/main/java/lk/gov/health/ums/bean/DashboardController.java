@@ -8,12 +8,16 @@ import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.enums.MachineStatus;
@@ -71,6 +75,13 @@ public class DashboardController implements Serializable {
     private int functioningPercent;
     private long needsAttentionCount;
 
+    private static final int TREND_MONTHS = 12;
+    private static final int MAX_TREND_SERIES = 7;
+
+    private List<String> trendMonths;
+    private List<TrendSeries> trendSeries;
+    private boolean trendHasData;
+
     @PostConstruct
     public void init() {
         filterDate = LocalDate.now().minusDays(1);
@@ -88,12 +99,20 @@ public class DashboardController implements Serializable {
 
         refreshSummary();
         refreshKpis();
+        refreshTrend();
     }
 
-    /** Ajax listener for the date/equipment-type/hospital filter controls. */
-    public void onFilterChange() {
+    /** Ajax listener for the date filter — the trend chart spans a fixed 12-month window, so it's unaffected. */
+    public void onDateChange() {
         refreshSummary();
         refreshKpis();
+    }
+
+    /** Ajax listener for the equipment-type/hospital filters — these also reshape the trend chart's breakdown. */
+    public void onCategoryFilterChange() {
+        refreshSummary();
+        refreshKpis();
+        refreshTrend();
     }
 
     private void refreshSummary() {
@@ -143,6 +162,81 @@ public class DashboardController implements Serializable {
 
     private int percentOf(long count, long total) {
         return total > 0 ? (int) Math.round(count * 100.0 / total) : 0;
+    }
+
+    /**
+     * Scan-volume trend for the trailing {@link #TREND_MONTHS} months, broken down the same way as
+     * the summary charts (by equipment type, or by hospital once a type is picked with no hospital).
+     * Categories are bucketed into calendar months in Java (matching {@link ReportController}'s
+     * day-bucketing idiom rather than a DB-specific date-truncation function); the top
+     * {@link #MAX_TREND_SERIES} by trailing-year volume keep their own line, the rest are folded
+     * into a single "Other" line so the legend never grows unbounded (e.g. when broken down by
+     * hospital, of which there are hundreds).
+     */
+    private void refreshTrend() {
+        LocalDate since = YearMonth.now().minusMonths(TREND_MONTHS - 1).atDay(1);
+        List<Object[]> rows;
+        Function<Object[], String> labeler;
+        if (filterHospital != null) {
+            rows = statusLogFacade.sumProcedureCountByDateAndType(since, filterHospital);
+            labeler = row -> typeLabel((EquipmentType) row[1]);
+        } else if (filterEquipmentType != null) {
+            rows = statusLogFacade.sumProcedureCountByDateAndInstitution(since, filterEquipmentType);
+            labeler = row -> institutionLabel((Institution) row[1]);
+        } else {
+            rows = statusLogFacade.sumProcedureCountByDateAndType(since, null);
+            labeler = row -> typeLabel((EquipmentType) row[1]);
+        }
+
+        Map<String, Map<YearMonth, Long>> byLabel = new LinkedHashMap<>();
+        Map<String, Long> totalByLabel = new HashMap<>();
+        for (Object[] row : rows) {
+            YearMonth month = YearMonth.from((LocalDate) row[0]);
+            String label = labeler.apply(row);
+            long value = ((Number) row[2]).longValue();
+            byLabel.computeIfAbsent(label, k -> new HashMap<>()).merge(month, value, Long::sum);
+            totalByLabel.merge(label, value, Long::sum);
+        }
+
+        List<YearMonth> months = new ArrayList<>();
+        for (YearMonth m = YearMonth.from(since); !m.isAfter(YearMonth.now()); m = m.plusMonths(1)) {
+            months.add(m);
+        }
+        DateTimeFormatter monthFormat = DateTimeFormatter.ofPattern("MMM yyyy");
+        trendMonths = months.stream().map(m -> m.format(monthFormat)).collect(Collectors.toList());
+
+        List<String> orderedLabels = totalByLabel.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        List<String> topLabels = orderedLabels.size() > MAX_TREND_SERIES
+                ? orderedLabels.subList(0, MAX_TREND_SERIES) : orderedLabels;
+
+        trendSeries = new ArrayList<>();
+        for (String label : topLabels) {
+            trendSeries.add(new TrendSeries(label, monthlyValues(byLabel.get(label), months)));
+        }
+        if (orderedLabels.size() > MAX_TREND_SERIES) {
+            List<String> otherLabels = orderedLabels.subList(MAX_TREND_SERIES, orderedLabels.size());
+            List<Long> otherValues = new ArrayList<>();
+            for (YearMonth m : months) {
+                long sum = 0;
+                for (String label : otherLabels) {
+                    sum += byLabel.get(label).getOrDefault(m, 0L);
+                }
+                otherValues.add(sum);
+            }
+            trendSeries.add(new TrendSeries("Other", otherValues));
+        }
+        trendHasData = totalByLabel.values().stream().mapToLong(Long::longValue).sum() > 0;
+    }
+
+    private List<Long> monthlyValues(Map<YearMonth, Long> monthly, List<YearMonth> months) {
+        List<Long> values = new ArrayList<>();
+        for (YearMonth m : months) {
+            values.add(monthly.getOrDefault(m, 0L));
+        }
+        return values;
     }
 
     /**
@@ -211,6 +305,32 @@ public class DashboardController implements Serializable {
                 .build()
                 .toString();
         return json.replace("</", "<\\/");
+    }
+
+    /** JSON payload (`{months:[...], series:[{name, data:[...]}...]}`) for the scan-volume trend chart. */
+    public String getTrendChartJson() {
+        JsonArrayBuilder months = Json.createArrayBuilder();
+        for (String month : trendMonths) {
+            months.add(month);
+        }
+        JsonArrayBuilder seriesArray = Json.createArrayBuilder();
+        for (TrendSeries series : trendSeries) {
+            JsonArrayBuilder data = Json.createArrayBuilder();
+            for (Long value : series.getValues()) {
+                data.add(value);
+            }
+            seriesArray.add(Json.createObjectBuilder().add("name", series.getLabel()).add("data", data));
+        }
+        String json = Json.createObjectBuilder()
+                .add("months", months)
+                .add("series", seriesArray)
+                .build()
+                .toString();
+        return json.replace("</", "<\\/");
+    }
+
+    public boolean isTrendHasData() {
+        return trendHasData;
     }
 
     public LocalDate getFilterDate() {
@@ -327,6 +447,28 @@ public class DashboardController implements Serializable {
 
         public long getScanCount() {
             return scanCount;
+        }
+    }
+
+    /** One line of the scan-volume trend chart — a category label and its monthly values, oldest first. */
+    public static class TrendSeries implements Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private final String label;
+        private final List<Long> values;
+
+        TrendSeries(String label, List<Long> values) {
+            this.label = label;
+            this.values = values;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public List<Long> getValues() {
+            return values;
         }
     }
 
