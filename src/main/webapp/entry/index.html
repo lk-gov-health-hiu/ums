@@ -50,10 +50,19 @@
   .status-field[data-status="UNDER_REPAIR"],.status-field[data-status="AWAITING_PARTS"]{border-color:var(--amber);}
   .status-field[data-status="NON_FUNCTIONAL_BER"]{border-color:var(--red);}
   .status-field[data-status="IDLE_NO_OPERATOR"]{border-color:var(--grey);}
+  #userBar{display:none;justify-content:space-between;align-items:center;margin-top:10px;}
+  #userBar span{color:var(--ink-muted);font-size:13px;}
+  #logoutBtn{width:auto;padding:6px 14px;font-size:13px;font-weight:600;margin-top:0;background:transparent;color:var(--ink-muted);border:1px solid var(--hairline);border-radius:4px;}
+  #logoutBtn:hover{background:var(--panel);color:var(--ink);}
 </style>
 </head>
 <body>
   <h1>Daily Equipment Status</h1>
+
+  <div id="userBar">
+    <span id="currentUserLabel"></span>
+    <button type="button" id="logoutBtn">Sign out</button>
+  </div>
 
   <form id="loginForm">
     <label for="username">Username</label>

@@ -15,6 +15,9 @@ const logDateInput = document.getElementById('logDate');
 const statusSelect = document.getElementById('statusSelect');
 const statusField = document.getElementById('statusField');
 const countInput = document.getElementById('count');
+const userBar = document.getElementById('userBar');
+const currentUserLabel = document.getElementById('currentUserLabel');
+const logoutBtn = document.getElementById('logoutBtn');
 
 statusSelect.addEventListener('change', () => {
     statusField.dataset.status = statusSelect.value;
@@ -50,15 +53,29 @@ async function loadEquipment() {
 function showLogin() {
     loginForm.style.display = 'block';
     entryForm.style.display = 'none';
+    userBar.style.display = 'none';
+    currentUserLabel.textContent = '';
 }
 
-function showEntry() {
+function showEntry(displayName) {
     loginForm.style.display = 'none';
     entryForm.style.display = 'block';
+    userBar.style.display = 'flex';
+    if (displayName) {
+        currentUserLabel.textContent = displayName;
+    }
     const today = todayLocalIso();
     logDateInput.value = today;
     logDateInput.max = today;
 }
+
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
+    } finally {
+        showLogin();
+    }
+});
 
 loginForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -71,7 +88,7 @@ loginForm.addEventListener('submit', async (event) => {
     });
     const body = await res.json();
     if (body.success) {
-        showEntry();
+        showEntry(body.data && body.data.displayName);
         await loadEquipment();
         flushQueue();
     } else {
