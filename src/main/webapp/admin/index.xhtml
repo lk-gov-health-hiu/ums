@@ -68,40 +68,84 @@
 
                 <div class="dashboard-panel">
                     <h3>Total by #{dashboardController.summaryLabelHeader}</h3>
-                    <p class="panel-caption">Equipment reported on #{dashboardController.filterDate}.</p>
+                    <p class="panel-caption">
+                        <span class="ums-mono">#{dashboardController.equipmentTotal}</span> equipment ·
+                        <span class="ums-mono">#{dashboardController.scansTotal}</span> scans for this selection.
+                    </p>
 
                     <h:panelGroup id="summarySection" layout="block">
                         <h:panelGroup rendered="#{empty dashboardController.summaryRows}">
                             <p>No submissions were recorded for this selection.</p>
                         </h:panelGroup>
 
-                        <h:panelGroup layout="block" styleClass="summary-body" rendered="#{not empty dashboardController.summaryRows}">
-                            <div id="summaryChart" class="summary-chart"/>
+                        <h:panelGroup layout="block" rendered="#{not empty dashboardController.summaryRows}">
+                            <div class="summary-body">
+                                <div class="chart-col">
+                                    <h4>Equipment vs. reported, by #{dashboardController.summaryLabelHeader}</h4>
+                                    <div id="equipmentChart" class="summary-chart"/>
+                                </div>
+                                <div class="chart-col">
+                                    <h4>Scans, by #{dashboardController.summaryLabelHeader}</h4>
+                                    <div id="scanChart" class="summary-chart"/>
+                                </div>
+                            </div>
                             <script type="text/javascript">
                                 (function () {
-                                    var el = document.getElementById('summaryChart');
-                                    if (!el) { return; }
-                                    var payload = #{dashboardController.summaryChartJson};
-                                    var chart = echarts.getInstanceByDom(el) || echarts.init(el);
-                                    chart.setOption({
+                                    var equipmentEl = document.getElementById('equipmentChart');
+                                    var scanEl = document.getElementById('scanChart');
+                                    if (!equipmentEl || !scanEl) { return; }
+                                    var equipmentPayload = #{dashboardController.equipmentChartJson};
+                                    var scanPayload = #{dashboardController.scanChartJson};
+
+                                    var equipmentChart = echarts.getInstanceByDom(equipmentEl) || echarts.init(equipmentEl);
+                                    equipmentChart.setOption({
+                                        grid: { left: 8, right: 24, top: 32, bottom: 8, containLabel: true },
+                                        legend: { top: 0, textStyle: { color: '#8fa3ac' } },
+                                        xAxis: { type: 'value', axisLabel: { color: '#8fa3ac' }, splitLine: { lineStyle: { color: '#2e3a40' } } },
+                                        yAxis: { type: 'category', data: equipmentPayload.categories, axisLabel: { color: '#e7edf0' } },
+                                        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+                                        series: [
+                                            {
+                                                name: 'Equipment',
+                                                type: 'bar',
+                                                data: equipmentPayload.equipment,
+                                                itemStyle: { color: '#9085e9', borderRadius: [0, 3, 3, 0] },
+                                                label: { show: true, position: 'right', color: '#e7edf0' }
+                                            },
+                                            {
+                                                name: 'Reported',
+                                                type: 'bar',
+                                                data: equipmentPayload.reported,
+                                                itemStyle: { color: '#4fc3d9', borderRadius: [0, 3, 3, 0] },
+                                                label: { show: true, position: 'right', color: '#e7edf0' }
+                                            }
+                                        ]
+                                    }, true);
+
+                                    var scanChart = echarts.getInstanceByDom(scanEl) || echarts.init(scanEl);
+                                    scanChart.setOption({
                                         grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
                                         xAxis: { type: 'value', axisLabel: { color: '#8fa3ac' }, splitLine: { lineStyle: { color: '#2e3a40' } } },
-                                        yAxis: { type: 'category', data: payload.categories, axisLabel: { color: '#e7edf0' } },
+                                        yAxis: { type: 'category', data: scanPayload.categories, axisLabel: { color: '#e7edf0' } },
                                         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
                                         series: [{
+                                            name: 'Scans',
                                             type: 'bar',
-                                            data: payload.data,
+                                            data: scanPayload.data,
                                             itemStyle: { color: '#4fc3d9', borderRadius: [0, 3, 3, 0] },
                                             label: { show: true, position: 'right', color: '#e7edf0' }
                                         }]
                                     }, true);
-                                    chart.resize();
+
+                                    equipmentChart.resize();
+                                    scanChart.resize();
                                     if (!window.umsChartResizeBound) {
                                         window.umsChartResizeBound = true;
                                         window.addEventListener('resize', function () {
-                                            var node = document.getElementById('summaryChart');
-                                            var inst = node &amp;&amp; echarts.getInstanceByDom(node);
-                                            if (inst) { inst.resize(); }
+                                            [equipmentEl, scanEl].forEach(function (node) {
+                                                var inst = node &amp;&amp; echarts.getInstanceByDom(node);
+                                                if (inst) { inst.resize(); }
+                                            });
                                         });
                                     }
                                 })();
@@ -110,13 +154,26 @@
                             <p:dataTable value="#{dashboardController.summaryRows}" var="row" styleClass="summary-table">
                                 <p:column headerText="#{dashboardController.summaryLabelHeader}">
                                     <h:outputText value="#{row.label}"/>
+                                    <f:facet name="footer">Total</f:facet>
                                 </p:column>
-                                <p:column headerText="Count" style="text-align:right">
-                                    <h:outputText styleClass="ums-mono" value="#{row.count}"/>
+                                <p:column headerText="Equipment" style="text-align:right">
+                                    <h:outputText styleClass="ums-mono" value="#{row.equipmentCount}"/>
+                                    <f:facet name="footer">
+                                        <span class="ums-mono">#{dashboardController.equipmentTotal}</span>
+                                    </f:facet>
                                 </p:column>
-                                <f:facet name="footer">
-                                    <div class="summary-total">Total — <span class="ums-mono">#{dashboardController.summaryTotal}</span></div>
-                                </f:facet>
+                                <p:column headerText="Reported" style="text-align:right">
+                                    <h:outputText styleClass="ums-mono" value="#{row.reportedCount}"/>
+                                    <f:facet name="footer">
+                                        <span class="ums-mono">#{dashboardController.summaryTotal}</span>
+                                    </f:facet>
+                                </p:column>
+                                <p:column headerText="Scans" style="text-align:right">
+                                    <h:outputText styleClass="ums-mono" value="#{row.scanCount}"/>
+                                    <f:facet name="footer">
+                                        <span class="ums-mono">#{dashboardController.scansTotal}</span>
+                                    </f:facet>
+                                </p:column>
                             </p:dataTable>
                         </h:panelGroup>
                     </h:panelGroup>

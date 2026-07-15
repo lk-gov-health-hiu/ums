@@ -10,7 +10,10 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.enums.MachineStatus;
@@ -58,6 +61,8 @@ public class DashboardController implements Serializable {
     private String summaryLabelHeader;
     private List<SummaryRow> summaryRows;
     private long summaryTotal;
+    private long equipmentTotal;
+    private long scansTotal;
 
     private long equipmentTracked;
     private long reportedCount;
@@ -92,22 +97,32 @@ public class DashboardController implements Serializable {
     }
 
     private void refreshSummary() {
-        List<Object[]> rows;
         if (filterHospital != null) {
             summaryLabelHeader = "Equipment Type";
-            rows = statusLogFacade.countReportedByType(filterDate, filterHospital);
-            summaryRows = toRows(rows, row -> typeLabel((EquipmentType) row[0]));
+            summaryRows = mergeRows(
+                    equipmentFacade.countActiveByType(filterHospital),
+                    statusLogFacade.countReportedByType(filterDate, filterHospital),
+                    statusLogFacade.sumProcedureCountByType(filterDate, filterHospital),
+                    row -> typeLabel((EquipmentType) row[0]));
         } else if (filterEquipmentType != null) {
             summaryLabelHeader = "Hospital";
-            rows = statusLogFacade.countReportedByInstitution(filterDate, filterEquipmentType);
-            summaryRows = toRows(rows, row -> institutionLabel((Institution) row[0]));
+            summaryRows = mergeRows(
+                    equipmentFacade.countActiveByInstitution(filterEquipmentType),
+                    statusLogFacade.countReportedByInstitution(filterDate, filterEquipmentType),
+                    statusLogFacade.sumProcedureCountByInstitution(filterDate, filterEquipmentType),
+                    row -> institutionLabel((Institution) row[0]));
         } else {
             summaryLabelHeader = "Equipment Type";
-            rows = statusLogFacade.countReportedByType(filterDate, null);
-            summaryRows = toRows(rows, row -> typeLabel((EquipmentType) row[0]));
+            summaryRows = mergeRows(
+                    equipmentFacade.countActiveByType(null),
+                    statusLogFacade.countReportedByType(filterDate, null),
+                    statusLogFacade.sumProcedureCountByType(filterDate, null),
+                    row -> typeLabel((EquipmentType) row[0]));
         }
         summaryRows.sort(Comparator.comparing(SummaryRow::getLabel));
-        summaryTotal = summaryRows.stream().mapToLong(SummaryRow::getCount).sum();
+        equipmentTotal = summaryRows.stream().mapToLong(SummaryRow::getEquipmentCount).sum();
+        summaryTotal = summaryRows.stream().mapToLong(SummaryRow::getReportedCount).sum();
+        scansTotal = summaryRows.stream().mapToLong(SummaryRow::getScanCount).sum();
     }
 
     /**
@@ -130,10 +145,27 @@ public class DashboardController implements Serializable {
         return total > 0 ? (int) Math.round(count * 100.0 / total) : 0;
     }
 
-    private List<SummaryRow> toRows(List<Object[]> rows, java.util.function.Function<Object[], String> labeler) {
+    /**
+     * Merges the three independently-grouped queries (fleet size, reported count, scan sum) into
+     * one row per category, keyed by label so a category present in one query but absent from
+     * another (e.g. a type with equipment but no submissions today) still gets a zero-filled row.
+     */
+    private List<SummaryRow> mergeRows(List<Object[]> equipmentRows, List<Object[]> reportedRows,
+            List<Object[]> scanRows, Function<Object[], String> labeler) {
+        Map<String, long[]> byLabel = new LinkedHashMap<>();
+        for (Object[] row : equipmentRows) {
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[0] = (Long) row[1];
+        }
+        for (Object[] row : reportedRows) {
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[1] = (Long) row[1];
+        }
+        for (Object[] row : scanRows) {
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[2] = ((Number) row[1]).longValue();
+        }
         List<SummaryRow> result = new ArrayList<>();
-        for (Object[] row : rows) {
-            result.add(new SummaryRow(labeler.apply(row), (Long) row[1]));
+        for (Map.Entry<String, long[]> entry : byLabel.entrySet()) {
+            long[] counts = entry.getValue();
+            result.add(new SummaryRow(entry.getKey(), counts[0], counts[1], counts[2]));
         }
         return result;
     }
@@ -146,13 +178,32 @@ public class DashboardController implements Serializable {
         return institution != null ? institution.getName() : "—";
     }
 
-    /** JSON payload (`{categories:[...], data:[...]}`) for the ECharts bar chart. */
-    public String getSummaryChartJson() {
+    /** JSON payload (`{categories:[...], equipment:[...], reported:[...]}`) for the grouped equipment/reported chart. */
+    public String getEquipmentChartJson() {
+        JsonArrayBuilder categories = Json.createArrayBuilder();
+        JsonArrayBuilder equipment = Json.createArrayBuilder();
+        JsonArrayBuilder reported = Json.createArrayBuilder();
+        for (SummaryRow row : summaryRows) {
+            categories.add(row.getLabel());
+            equipment.add(row.getEquipmentCount());
+            reported.add(row.getReportedCount());
+        }
+        String json = Json.createObjectBuilder()
+                .add("categories", categories)
+                .add("equipment", equipment)
+                .add("reported", reported)
+                .build()
+                .toString();
+        return json.replace("</", "<\\/");
+    }
+
+    /** JSON payload (`{categories:[...], data:[...]}`) for the scan-count chart. */
+    public String getScanChartJson() {
         JsonArrayBuilder categories = Json.createArrayBuilder();
         JsonArrayBuilder data = Json.createArrayBuilder();
         for (SummaryRow row : summaryRows) {
             categories.add(row.getLabel());
-            data.add(row.getCount());
+            data.add(row.getScanCount());
         }
         String json = Json.createObjectBuilder()
                 .add("categories", categories)
@@ -210,6 +261,14 @@ public class DashboardController implements Serializable {
         return summaryTotal;
     }
 
+    public long getEquipmentTotal() {
+        return equipmentTotal;
+    }
+
+    public long getScansTotal() {
+        return scansTotal;
+    }
+
     public long getEquipmentTracked() {
         return equipmentTracked;
     }
@@ -234,25 +293,40 @@ public class DashboardController implements Serializable {
         return needsAttentionCount;
     }
 
-    /** One row of the context-sensitive summary — a label (equipment type or hospital name) and its count. */
+    /**
+     * One row of the context-sensitive summary — a label (equipment type or hospital name) with
+     * its fleet size, the count reported on the selected date, and that date's scan/study total.
+     */
     public static class SummaryRow implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
         private final String label;
-        private final long count;
+        private final long equipmentCount;
+        private final long reportedCount;
+        private final long scanCount;
 
-        SummaryRow(String label, long count) {
+        SummaryRow(String label, long equipmentCount, long reportedCount, long scanCount) {
             this.label = label;
-            this.count = count;
+            this.equipmentCount = equipmentCount;
+            this.reportedCount = reportedCount;
+            this.scanCount = scanCount;
         }
 
         public String getLabel() {
             return label;
         }
 
-        public long getCount() {
-            return count;
+        public long getEquipmentCount() {
+            return equipmentCount;
+        }
+
+        public long getReportedCount() {
+            return reportedCount;
+        }
+
+        public long getScanCount() {
+            return scanCount;
         }
     }
 

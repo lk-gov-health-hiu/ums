@@ -51,6 +51,30 @@ public class EquipmentFacade extends AbstractFacade<Equipment> {
         return query.getSingleResult();
     }
 
+    /** Active equipment counts grouped by type, optionally scoped to one hospital — feeds the dashboard's equipment-by-type chart. */
+    public List<Object[]> countActiveByType(Institution institution) {
+        String jpql = "SELECT e.type, COUNT(e) FROM Equipment e WHERE e.retired = false"
+                + (institution != null ? " AND e.institution = :institution" : "")
+                + " GROUP BY e.type";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
+        if (institution != null) {
+            query.setParameter("institution", institution);
+        }
+        return query.getResultList();
+    }
+
+    /** Active equipment counts grouped by hospital, optionally scoped to one equipment type — feeds the dashboard's equipment-by-hospital chart. */
+    public List<Object[]> countActiveByInstitution(EquipmentType type) {
+        String jpql = "SELECT e.institution, COUNT(e) FROM Equipment e WHERE e.retired = false"
+                + (type != null ? " AND e.type = :type" : "")
+                + " GROUP BY e.institution";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class);
+        if (type != null) {
+            query.setParameter("type", type);
+        }
+        return query.getResultList();
+    }
+
     /** Active equipment with no StatusLog row at all -- never reported, distinct from "reported and down". */
     public List<Equipment> findNeverReported() {
         return em.createQuery(
