@@ -1,0 +1,159 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                template="/admin/template.xhtml">
+    <ui:define name="content">
+        <h:panelGroup rendered="#{not sessionController.loggedIn}">
+            <h2>Equipment tracked</h2>
+            <p>Please <h:link outcome="/admin/login.xhtml" value="sign in"/>.</p>
+        </h:panelGroup>
+
+        <h:panelGroup rendered="#{sessionController.loggedIn}">
+            <h:outputScript library="js" name="echarts.min.js" target="head"/>
+
+            <h:link outcome="/admin/index.xhtml" styleClass="ums-back-link">
+                <span class="pi pi-arrow-left"/>Back to dashboard
+            </h:link>
+
+            <h2>Equipment tracked</h2>
+
+            <h:form id="drilldownForm">
+                <div class="dashboard-filters">
+                    <div class="filter-field">
+                        <p:outputLabel for="filterDate" value="Date"/>
+                        <p:calendar id="filterDate" value="#{dashboardController.filterDate}" pattern="yyyy-MM-dd"
+                                    maxdate="today">
+                            <p:ajax event="dateSelect" listener="#{equipmentDrilldownController.onFilterChange}" update=":drilldownForm:drilldownSection"/>
+                            <p:ajax event="blur" listener="#{equipmentDrilldownController.onFilterChange}" update=":drilldownForm:drilldownSection"/>
+                        </p:calendar>
+                    </div>
+
+                    <div class="filter-field">
+                        <p:outputLabel for="filterType" value="Equipment"/>
+                        <p:selectOneMenu id="filterType" value="#{dashboardController.filterEquipmentType}"
+                                          converter="equipmentTypeConverter">
+                            <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"/>
+                            <f:selectItems value="#{dashboardController.equipmentTypes}" var="t" itemLabel="#{t.name}" itemValue="#{t}"/>
+                            <p:ajax listener="#{equipmentDrilldownController.onFilterChange}" update=":drilldownForm:drilldownSection"/>
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div class="filter-field">
+                        <p:outputLabel for="filterHospital" value="Hospital"/>
+                        <p:selectOneMenu id="filterHospital" value="#{dashboardController.filterHospital}"
+                                          converter="institutionConverter" disabled="#{dashboardController.hospitalFilterLocked}"
+                                          autoWidth="false" styleClass="filter-hospital-select"
+                                          filter="true" filterMatchMode="contains">
+                            <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"
+                                          rendered="#{not dashboardController.hospitalFilterLocked}"/>
+                            <f:selectItems value="#{dashboardController.hospitals}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
+                            <p:ajax listener="#{equipmentDrilldownController.onFilterChange}" update=":drilldownForm:drilldownSection"/>
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div class="filter-field filter-actions">
+                        <p:outputLabel value="&#160;"/>
+                        <div class="filter-actions-buttons">
+                            <p:commandButton icon="pi pi-refresh" title="Reload" action="#{equipmentDrilldownController.reload}"
+                                              ajax="false"/>
+                            <p:commandButton icon="pi pi-filter-slash" title="Reset filters" action="#{equipmentDrilldownController.resetFilters}"
+                                              ajax="false"/>
+                        </div>
+                    </div>
+                </div>
+
+                <h:panelGroup id="drilldownSection" layout="block">
+                    <div class="kpi-row">
+                        <div class="kpi-tile">
+                            <div class="kpi-value">#{equipmentDrilldownController.equipmentTracked}</div>
+                            <div class="kpi-label">Equipment tracked</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-panel">
+                        <h:panelGroup rendered="#{not equipmentDrilldownController.hasData}">
+                            <p>No equipment recorded for this selection.</p>
+                        </h:panelGroup>
+
+                        <h:panelGroup layout="block" rendered="#{equipmentDrilldownController.hasData}">
+                            <div class="summary-body">
+                                <div class="chart-col">
+                                    <h4>Types of equipment tracked</h4>
+                                    <p class="panel-caption">Scoped to the Hospital filter, if set.</p>
+                                    <div id="typeChart" class="summary-chart"/>
+                                </div>
+                                <div class="chart-col">
+                                    <h4>Equipment tracked, by hospital</h4>
+                                    <p class="panel-caption">
+                                        Scoped to the Equipment filter, if set.
+                                        <h:outputText value=" Showing the top 20 hospitals by count." rendered="#{equipmentDrilldownController.hospitalChartTruncated}"/>
+                                    </p>
+                                    <div id="hospitalChart" class="summary-chart"/>
+                                </div>
+                            </div>
+                            <script type="text/javascript">
+                                (function () {
+                                    var typeEl = document.getElementById('typeChart');
+                                    var hospitalEl = document.getElementById('hospitalChart');
+                                    if (!typeEl || !hospitalEl) { return; }
+                                    var typePayload = #{equipmentDrilldownController.typeChartJson};
+                                    var hospitalPayload = #{equipmentDrilldownController.hospitalChartJson};
+                                    var palette = ['#4fc3d9', '#9085e9', '#3fbf7f', '#e0a64b', '#d9534f', '#3987e5', '#c98500', '#d55181'];
+
+                                    var typeChart = echarts.getInstanceByDom(typeEl) || echarts.init(typeEl);
+                                    typeChart.setOption({
+                                        tooltip: { trigger: 'item' },
+                                        legend: { bottom: 0, textStyle: { color: '#8fa3ac' } },
+                                        color: palette,
+                                        series: [{
+                                            name: 'Equipment',
+                                            type: 'pie',
+                                            radius: ['40%', '70%'],
+                                            avoidLabelOverlap: true,
+                                            itemStyle: { borderColor: '#1b252b', borderWidth: 2 },
+                                            label: { color: '#e7edf0' },
+                                            labelLine: { lineStyle: { color: '#8fa3ac' } },
+                                            data: typePayload
+                                        }]
+                                    }, true);
+
+                                    var hospitalChart = echarts.getInstanceByDom(hospitalEl) || echarts.init(hospitalEl);
+                                    hospitalChart.setOption({
+                                        grid: { left: 8, right: 24, top: 16, bottom: 64, containLabel: true },
+                                        xAxis: { type: 'category', data: hospitalPayload.categories, axisLabel: { color: '#8fa3ac', interval: 0, rotate: 45 } },
+                                        yAxis: { type: 'value', axisLabel: { color: '#8fa3ac' }, splitLine: { lineStyle: { color: '#2e3a40' } } },
+                                        tooltip: { trigger: 'axis' },
+                                        series: [{
+                                            name: 'Equipment',
+                                            type: 'line',
+                                            data: hospitalPayload.data,
+                                            symbol: 'circle',
+                                            symbolSize: 6,
+                                            lineStyle: { width: 2, color: '#4fc3d9' },
+                                            itemStyle: { color: '#4fc3d9' },
+                                            areaStyle: { color: 'rgba(79, 195, 217, 0.12)' }
+                                        }]
+                                    }, true);
+
+                                    typeChart.resize();
+                                    hospitalChart.resize();
+                                    if (!window.umsChartResizeBound) {
+                                        window.umsChartResizeBound = true;
+                                        window.addEventListener('resize', function () {
+                                            [typeEl, hospitalEl].forEach(function (node) {
+                                                var inst = node &amp;&amp; echarts.getInstanceByDom(node);
+                                                if (inst) { inst.resize(); }
+                                            });
+                                        });
+                                    }
+                                })();
+                            </script>
+                        </h:panelGroup>
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </h:panelGroup>
+    </ui:define>
+</ui:composition>

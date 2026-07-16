@@ -439,6 +439,33 @@ body .ui-messages-info {
 .kpi-tile.kpi-attention .kpi-value { color: var(--ums-amber); }
 .kpi-tile.kpi-attention.kpi-zero .kpi-value { color: var(--ums-green); }
 
+body a.kpi-tile-clickable {
+    display: block;
+    text-decoration: none;
+    cursor: pointer;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+body a.kpi-tile-clickable:hover {
+    border-color: var(--ums-cyan);
+    box-shadow: inset 0 0 0 1px var(--ums-cyan);
+}
+
+/* Drill-down pages: link back to the main dashboard */
+body a.ums-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+    color: var(--ums-ink-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+body a.ums-back-link:hover {
+    color: var(--ums-ink);
+}
+
 /* Dashboard: context-sensitive summary (two bar charts) */
 .summary-body {
     display: flex;

@@ -22,8 +22,6 @@ import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.enums.MachineStatus;
 import lk.gov.health.ums.facade.EquipmentFacade;
-import lk.gov.health.ums.facade.EquipmentTypeFacade;
-import lk.gov.health.ums.facade.InstitutionFacade;
 import lk.gov.health.ums.facade.StatusLogFacade;
 
 /**
@@ -48,19 +46,7 @@ public class DashboardController implements Serializable {
     @Inject
     private EquipmentFacade equipmentFacade;
     @Inject
-    private EquipmentTypeFacade equipmentTypeFacade;
-    @Inject
-    private InstitutionFacade institutionFacade;
-    @Inject
-    private SessionController sessionController;
-
-    private LocalDate filterDate;
-    private EquipmentType filterEquipmentType;
-    private Institution filterHospital;
-
-    private List<EquipmentType> equipmentTypes;
-    private List<Institution> hospitals;
-    private boolean hospitalFilterLocked;
+    private DashboardFilterState filterState;
 
     private String summaryLabelHeader;
     private List<SummaryRow> summaryRows;
@@ -84,19 +70,6 @@ public class DashboardController implements Serializable {
 
     @PostConstruct
     public void init() {
-        filterDate = LocalDate.now().minusDays(1);
-        equipmentTypes = equipmentTypeFacade.findAll();
-
-        if (sessionController.isSystemAdmin() || sessionController.isNationalUser()) {
-            hospitals = institutionFacade.findAll();
-            hospitalFilterLocked = false;
-        } else {
-            Institution own = sessionController.getScopeInstitution();
-            hospitals = own != null ? List.of(own) : List.of();
-            filterHospital = own;
-            hospitalFilterLocked = true;
-        }
-
         refreshSummary();
         refreshKpis();
         refreshTrend();
@@ -122,19 +95,18 @@ public class DashboardController implements Serializable {
         refreshTrend();
     }
 
-    /** "Reset filters" button — restores the date/equipment/hospital filters to their {@link #init()} defaults. */
+    /** "Reset filters" button — restores the date/equipment/hospital filters to their {@link DashboardFilterState#init()} defaults. */
     public void resetFilters() {
-        filterDate = LocalDate.now().minusDays(1);
-        filterEquipmentType = null;
-        if (!hospitalFilterLocked) {
-            filterHospital = null;
-        }
+        filterState.resetFilters();
         refreshSummary();
         refreshKpis();
         refreshTrend();
     }
 
     private void refreshSummary() {
+        LocalDate filterDate = filterState.getFilterDate();
+        EquipmentType filterEquipmentType = filterState.getFilterEquipmentType();
+        Institution filterHospital = filterState.getFilterHospital();
         if (filterHospital != null) {
             summaryLabelHeader = "Equipment Type";
             summaryRows = mergeRows(
@@ -173,6 +145,9 @@ public class DashboardController implements Serializable {
      * excluded, since that's a missing-data problem rather than a non-functioning one.
      */
     private void refreshKpis() {
+        LocalDate filterDate = filterState.getFilterDate();
+        EquipmentType filterEquipmentType = filterState.getFilterEquipmentType();
+        Institution filterHospital = filterState.getFilterHospital();
         equipmentTracked = equipmentFacade.countActive(filterHospital, filterEquipmentType);
         reportedCount = summaryTotal;
         reportedPercent = percentOf(reportedCount, equipmentTracked);
@@ -196,6 +171,8 @@ public class DashboardController implements Serializable {
      * hospital, of which there are hundreds).
      */
     private void refreshTrend() {
+        EquipmentType filterEquipmentType = filterState.getFilterEquipmentType();
+        Institution filterHospital = filterState.getFilterHospital();
         LocalDate since = YearMonth.now().minusMonths(TREND_MONTHS - 1).atDay(1);
         List<Object[]> rows;
         Function<Object[], String> labeler;
@@ -360,39 +337,39 @@ public class DashboardController implements Serializable {
     }
 
     public LocalDate getFilterDate() {
-        return filterDate;
+        return filterState.getFilterDate();
     }
 
     public void setFilterDate(LocalDate filterDate) {
-        this.filterDate = filterDate;
+        filterState.setFilterDate(filterDate);
     }
 
     public EquipmentType getFilterEquipmentType() {
-        return filterEquipmentType;
+        return filterState.getFilterEquipmentType();
     }
 
     public void setFilterEquipmentType(EquipmentType filterEquipmentType) {
-        this.filterEquipmentType = filterEquipmentType;
+        filterState.setFilterEquipmentType(filterEquipmentType);
     }
 
     public Institution getFilterHospital() {
-        return filterHospital;
+        return filterState.getFilterHospital();
     }
 
     public void setFilterHospital(Institution filterHospital) {
-        this.filterHospital = filterHospital;
+        filterState.setFilterHospital(filterHospital);
     }
 
     public List<EquipmentType> getEquipmentTypes() {
-        return equipmentTypes;
+        return filterState.getEquipmentTypes();
     }
 
     public List<Institution> getHospitals() {
-        return hospitals;
+        return filterState.getHospitals();
     }
 
     public boolean isHospitalFilterLocked() {
-        return hospitalFilterLocked;
+        return filterState.isHospitalFilterLocked();
     }
 
     public String getSummaryLabelHeader() {

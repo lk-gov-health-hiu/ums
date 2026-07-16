@@ -61,10 +61,10 @@
                 </div>
 
                 <h:panelGroup id="kpiSection" layout="block" styleClass="kpi-row">
-                    <div class="kpi-tile">
+                    <h:link outcome="/admin/equipment-drilldown.xhtml" styleClass="kpi-tile kpi-tile-clickable">
                         <div class="kpi-value">#{dashboardController.equipmentTracked}</div>
                         <div class="kpi-label">Equipment tracked</div>
-                    </div>
+                    </h:link>
                     <div class="kpi-tile">
                         <div class="kpi-value">#{dashboardController.reportedCount}</div>
                         <div class="kpi-label">Reported #{dashboardController.filterDate} (of #{dashboardController.equipmentTracked}, #{dashboardController.reportedPercent}%)</div>
