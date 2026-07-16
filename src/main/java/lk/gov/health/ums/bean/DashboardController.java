@@ -23,6 +23,7 @@ import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.enums.MachineStatus;
 import lk.gov.health.ums.facade.EquipmentFacade;
 import lk.gov.health.ums.facade.StatusLogFacade;
+import lk.gov.health.ums.util.Pluralizer;
 
 /**
  * National-level utilisation dashboard: a date/equipment-type/hospital filter
@@ -289,12 +290,18 @@ public class DashboardController implements Serializable {
         return (procedureName != null && !procedureName.isBlank()) ? procedureName : type.getName();
     }
 
-    /** JSON payload (`{categories:[...], equipment:[...]}`) for the equipment-by-category chart. */
+    /**
+     * JSON payload (`{categories:[...], equipment:[...]}`) for the equipment-by-category chart.
+     * Categories are pluralized (e.g. "CT Scanners") when grouped by equipment type — each bar is
+     * a count of that type — but left as-is when grouped by hospital, since hospital names aren't
+     * nouns to pluralize.
+     */
     public String getEquipmentChartJson() {
+        boolean byType = "Equipment Type".equals(summaryLabelHeader);
         JsonArrayBuilder categories = Json.createArrayBuilder();
         JsonArrayBuilder equipment = Json.createArrayBuilder();
         for (SummaryRow row : summaryRows) {
-            categories.add(row.getLabel());
+            categories.add(byType ? Pluralizer.plural(row.getLabel()) : row.getLabel());
             equipment.add(row.getEquipmentCount());
         }
         String json = Json.createObjectBuilder()

@@ -13,6 +13,7 @@ import java.util.List;
 import lk.gov.health.ums.entity.EquipmentType;
 import lk.gov.health.ums.entity.Institution;
 import lk.gov.health.ums.facade.EquipmentFacade;
+import lk.gov.health.ums.util.Pluralizer;
 
 /**
  * Drill-down behind the dashboard's "Equipment tracked" KPI: the same fleet count broken
@@ -93,11 +94,11 @@ public class EquipmentDrilldownController implements Serializable {
         return institution != null ? institution.getName() : "—";
     }
 
-    /** JSON payload (`[{name, value}...]`) for the equipment-by-type pie chart. */
+    /** JSON payload (`[{name, value}...]`) for the equipment-by-type pie chart — labels pluralized (e.g. "CT Scanners"), each slice being a count of that type. */
     public String getTypeChartJson() {
         JsonArrayBuilder array = Json.createArrayBuilder();
         for (TypeCount row : byType) {
-            array.add(Json.createObjectBuilder().add("name", row.getLabel()).add("value", row.getCount()));
+            array.add(Json.createObjectBuilder().add("name", Pluralizer.plural(row.getLabel())).add("value", row.getCount()));
         }
         return array.build().toString().replace("</", "<\\/");
     }
