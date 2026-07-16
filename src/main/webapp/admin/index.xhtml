@@ -60,12 +60,12 @@
                         <div class="kpi-label">Equipment tracked</div>
                     </div>
                     <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.reportedPercent}%</div>
-                        <div class="kpi-label">Reported #{dashboardController.filterDate} (#{dashboardController.reportedCount}/#{dashboardController.equipmentTracked})</div>
+                        <div class="kpi-value">#{dashboardController.reportedCount}/#{dashboardController.equipmentTracked}</div>
+                        <div class="kpi-label">Reported #{dashboardController.filterDate} (#{dashboardController.reportedPercent}%)</div>
                     </div>
                     <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.functioningPercent}%</div>
-                        <div class="kpi-label">Functioning (of reported)</div>
+                        <div class="kpi-value">#{dashboardController.functioningCount}/#{dashboardController.reportedCount}</div>
+                        <div class="kpi-label">Functioning of reported (#{dashboardController.functioningPercent}%)</div>
                     </div>
                     <div class="kpi-tile kpi-attention #{dashboardController.needsAttentionCount == 0 ? 'kpi-zero' : ''}">
                         <div class="kpi-value">#{dashboardController.needsAttentionCount}</div>

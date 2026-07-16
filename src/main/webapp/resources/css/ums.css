@@ -386,6 +386,10 @@ body .ui-messages-info {
     gap: 0.35rem;
 }
 
+.filter-actions {
+    margin-left: auto;
+}
+
 .filter-actions .ui-outputlabel {
     visibility: hidden;
 }
