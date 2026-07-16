@@ -299,6 +299,16 @@ body .ui-selectonemenu-label {
     color: var(--ums-ink);
 }
 
+body .filter-hospital-select {
+    width: 260px;
+}
+
+body .filter-hospital-select .ui-selectonemenu-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 body label,
 body .ui-outputlabel {
     color: var(--ums-ink-muted);

@@ -39,7 +39,8 @@
                     <div class="filter-field">
                         <p:outputLabel for="filterHospital" value="Hospital"/>
                         <p:selectOneMenu id="filterHospital" value="#{dashboardController.filterHospital}"
-                                          converter="institutionConverter" disabled="#{dashboardController.hospitalFilterLocked}">
+                                          converter="institutionConverter" disabled="#{dashboardController.hospitalFilterLocked}"
+                                          autoWidth="false" styleClass="filter-hospital-select">
                             <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"
                                           rendered="#{not dashboardController.hospitalFilterLocked}"/>
                             <f:selectItems value="#{dashboardController.hospitals}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
@@ -60,16 +61,16 @@
                         <div class="kpi-label">Equipment tracked</div>
                     </div>
                     <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.reportedCount}/#{dashboardController.equipmentTracked}</div>
-                        <div class="kpi-label">Reported #{dashboardController.filterDate} (#{dashboardController.reportedPercent}%)</div>
+                        <div class="kpi-value">#{dashboardController.reportedCount}</div>
+                        <div class="kpi-label">Reported #{dashboardController.filterDate} (of #{dashboardController.equipmentTracked}, #{dashboardController.reportedPercent}%)</div>
                     </div>
                     <div class="kpi-tile">
-                        <div class="kpi-value">#{dashboardController.functioningCount}/#{dashboardController.reportedCount}</div>
-                        <div class="kpi-label">Functioning of reported (#{dashboardController.functioningPercent}%)</div>
+                        <div class="kpi-value">#{dashboardController.functioningCount}</div>
+                        <div class="kpi-label">Functioning of #{dashboardController.reportedCount} reported (#{dashboardController.functioningPercent}%)</div>
                     </div>
-                    <div class="kpi-tile kpi-attention #{dashboardController.needsAttentionCount == 0 ? 'kpi-zero' : ''}">
-                        <div class="kpi-value">#{dashboardController.needsAttentionCount}</div>
-                        <div class="kpi-label">Needs attention</div>
+                    <div class="kpi-tile kpi-attention #{dashboardController.nonFunctioningCount == 0 ? 'kpi-zero' : ''}">
+                        <div class="kpi-value">#{dashboardController.nonFunctioningCount}</div>
+                        <div class="kpi-label">Non-functioning</div>
                     </div>
                 </h:panelGroup>
 

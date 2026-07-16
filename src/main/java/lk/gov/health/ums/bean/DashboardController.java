@@ -73,7 +73,7 @@ public class DashboardController implements Serializable {
     private int reportedPercent;
     private long functioningCount;
     private int functioningPercent;
-    private long needsAttentionCount;
+    private long nonFunctioningCount;
 
     private static final int TREND_MONTHS = 12;
     private static final int MAX_TREND_SERIES = 7;
@@ -153,8 +153,9 @@ public class DashboardController implements Serializable {
 
     /**
      * The four top-line KPI tiles, scoped to the current hospital/equipment-type filter.
-     * "Reported" and "Functioning" are for the selected date; "Needs attention" reflects each
-     * machine's latest report regardless of date, matching its Reports-page counterpart.
+     * "Reported" and "Functioning" are for the selected date; "Non-functioning" reflects each
+     * machine's latest report regardless of date — equipment that has never reported at all is
+     * excluded, since that's a missing-data problem rather than a non-functioning one.
      */
     private void refreshKpis() {
         equipmentTracked = equipmentFacade.countActive(filterHospital, filterEquipmentType);
@@ -163,8 +164,7 @@ public class DashboardController implements Serializable {
         functioningCount = statusLogFacade.countReportedWithStatus(
                 filterDate, MachineStatus.FUNCTIONING, filterHospital, filterEquipmentType);
         functioningPercent = percentOf(functioningCount, reportedCount);
-        needsAttentionCount = equipmentFacade.countNeverReported(filterHospital, filterEquipmentType)
-                + statusLogFacade.countLatestNonFunctioning(filterHospital, filterEquipmentType);
+        nonFunctioningCount = statusLogFacade.countLatestNonFunctioning(filterHospital, filterEquipmentType);
     }
 
     private int percentOf(long count, long total) {
@@ -416,8 +416,8 @@ public class DashboardController implements Serializable {
         return functioningPercent;
     }
 
-    public long getNeedsAttentionCount() {
-        return needsAttentionCount;
+    public long getNonFunctioningCount() {
+        return nonFunctioningCount;
     }
 
     /**

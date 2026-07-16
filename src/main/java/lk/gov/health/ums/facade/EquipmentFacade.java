@@ -83,20 +83,4 @@ public class EquipmentFacade extends AbstractFacade<Equipment> {
                 .getResultList();
     }
 
-    /** Same as {@link #findNeverReported}, counted and optionally scoped to one hospital and/or equipment type. */
-    public long countNeverReported(Institution institution, EquipmentType type) {
-        String jpql = "SELECT COUNT(e) FROM Equipment e WHERE e.retired = false "
-                + "AND e NOT IN (SELECT DISTINCT s.equipment FROM StatusLog s)"
-                + (institution != null ? " AND e.institution = :institution" : "")
-                + (type != null ? " AND e.type = :type" : "");
-        TypedQuery<Long> query = em.createQuery(jpql, Long.class);
-        if (institution != null) {
-            query.setParameter("institution", institution);
-        }
-        if (type != null) {
-            query.setParameter("type", type);
-        }
-        return query.getSingleResult();
-    }
-
 }
