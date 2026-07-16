@@ -94,7 +94,7 @@
                         <h:panelGroup layout="block" rendered="#{not empty dashboardController.summaryRows}">
                             <div class="summary-body">
                                 <div class="chart-col">
-                                    <h4>Equipment vs. functioning, by #{dashboardController.summaryLabelHeader}</h4>
+                                    <h4>Equipment, by #{dashboardController.summaryLabelHeader}</h4>
                                     <div id="equipmentChart" class="summary-chart"/>
                                 </div>
                                 <div class="chart-col">
@@ -112,27 +112,17 @@
 
                                     var equipmentChart = echarts.getInstanceByDom(equipmentEl) || echarts.init(equipmentEl);
                                     equipmentChart.setOption({
-                                        grid: { left: 8, right: 24, top: 32, bottom: 8, containLabel: true },
-                                        legend: { top: 0, textStyle: { color: '#8fa3ac' } },
+                                        grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
                                         xAxis: { type: 'value', axisLabel: { color: '#8fa3ac' }, splitLine: { lineStyle: { color: '#2e3a40' } } },
                                         yAxis: { type: 'category', data: equipmentPayload.categories, axisLabel: { color: '#e7edf0' } },
                                         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                                        series: [
-                                            {
-                                                name: 'Equipment',
-                                                type: 'bar',
-                                                data: equipmentPayload.equipment,
-                                                itemStyle: { color: '#9085e9', borderRadius: [0, 3, 3, 0] },
-                                                label: { show: true, position: 'right', color: '#e7edf0' }
-                                            },
-                                            {
-                                                name: 'Functioning',
-                                                type: 'bar',
-                                                data: equipmentPayload.functioning,
-                                                itemStyle: { color: '#4fc3d9', borderRadius: [0, 3, 3, 0] },
-                                                label: { show: true, position: 'right', color: '#e7edf0' }
-                                            }
-                                        ]
+                                        series: [{
+                                            name: 'Equipment',
+                                            type: 'bar',
+                                            data: equipmentPayload.equipment,
+                                            itemStyle: { color: '#9085e9', borderRadius: [0, 3, 3, 0] },
+                                            label: { show: true, position: 'right', color: '#e7edf0' }
+                                        }]
                                     }, true);
 
                                     var scanChart = echarts.getInstanceByDom(scanEl) || echarts.init(scanEl);
