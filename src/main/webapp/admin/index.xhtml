@@ -40,7 +40,8 @@
                         <p:outputLabel for="filterHospital" value="Hospital"/>
                         <p:selectOneMenu id="filterHospital" value="#{dashboardController.filterHospital}"
                                           converter="institutionConverter" disabled="#{dashboardController.hospitalFilterLocked}"
-                                          autoWidth="false" styleClass="filter-hospital-select">
+                                          autoWidth="false" styleClass="filter-hospital-select"
+                                          filter="true" filterMatchMode="contains">
                             <f:selectItem itemLabel="All" itemValue="#{null}" noSelectionOption="false"
                                           rendered="#{not dashboardController.hospitalFilterLocked}"/>
                             <f:selectItems value="#{dashboardController.hospitals}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
@@ -50,8 +51,12 @@
 
                     <div class="filter-field filter-actions">
                         <p:outputLabel value="&#160;"/>
-                        <p:commandButton value="Reload" icon="pi pi-refresh" action="#{dashboardController.reload}"
-                                          ajax="false"/>
+                        <div class="filter-actions-buttons">
+                            <p:commandButton icon="pi pi-refresh" title="Reload" action="#{dashboardController.reload}"
+                                              ajax="false"/>
+                            <p:commandButton icon="pi pi-filter-slash" title="Reset filters" action="#{dashboardController.resetFilters}"
+                                              ajax="false"/>
+                        </div>
                     </div>
                 </div>
 

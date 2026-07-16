@@ -396,8 +396,9 @@ body .ui-messages-info {
     gap: 0.35rem;
 }
 
-.filter-actions {
-    margin-left: auto;
+.filter-actions-buttons {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .filter-actions .ui-outputlabel {

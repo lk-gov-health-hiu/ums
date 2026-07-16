@@ -122,6 +122,18 @@ public class DashboardController implements Serializable {
         refreshTrend();
     }
 
+    /** "Reset filters" button — restores the date/equipment/hospital filters to their {@link #init()} defaults. */
+    public void resetFilters() {
+        filterDate = LocalDate.now().minusDays(1);
+        filterEquipmentType = null;
+        if (!hospitalFilterLocked) {
+            filterHospital = null;
+        }
+        refreshSummary();
+        refreshKpis();
+        refreshTrend();
+    }
+
     private void refreshSummary() {
         if (filterHospital != null) {
             summaryLabelHeader = "Equipment Type";
