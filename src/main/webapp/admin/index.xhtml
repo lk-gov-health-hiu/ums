@@ -21,7 +21,8 @@
                         <p:outputLabel for="filterDate" value="Date"/>
                         <p:calendar id="filterDate" value="#{dashboardController.filterDate}" pattern="yyyy-MM-dd"
                                     maxdate="today">
-                            <p:ajax listener="#{dashboardController.onDateChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection"/>
+                            <p:ajax event="dateSelect" listener="#{dashboardController.onDateChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection"/>
+                            <p:ajax event="blur" listener="#{dashboardController.onDateChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection"/>
                         </p:calendar>
                     </div>
 
@@ -44,6 +45,12 @@
                             <f:selectItems value="#{dashboardController.hospitals}" var="i" itemLabel="#{i.name}" itemValue="#{i}"/>
                             <p:ajax listener="#{dashboardController.onCategoryFilterChange}" update=":dashboardForm:kpiSection :dashboardForm:summarySection :dashboardForm:trendSection"/>
                         </p:selectOneMenu>
+                    </div>
+
+                    <div class="filter-field filter-actions">
+                        <p:outputLabel value="&#160;"/>
+                        <p:commandButton value="Reload" icon="pi pi-refresh" action="#{dashboardController.reload}"
+                                          ajax="false"/>
                     </div>
                 </div>
 

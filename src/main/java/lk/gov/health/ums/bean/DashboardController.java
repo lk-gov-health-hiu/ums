@@ -115,6 +115,13 @@ public class DashboardController implements Serializable {
         refreshTrend();
     }
 
+    /** Manual "Reload" button — re-runs every query under the current filters, e.g. to pick up submissions made since page load. */
+    public void reload() {
+        refreshSummary();
+        refreshKpis();
+        refreshTrend();
+    }
+
     private void refreshSummary() {
         if (filterHospital != null) {
             summaryLabelHeader = "Equipment Type";
