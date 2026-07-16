@@ -113,13 +113,15 @@ public class DashboardController implements Serializable {
                     equipmentFacade.countActiveByType(filterHospital),
                     statusLogFacade.countReportedByType(filterDate, filterHospital),
                     statusLogFacade.sumProcedureCountByType(filterDate, filterHospital),
-                    row -> typeLabel((EquipmentType) row[0]));
+                    row -> typeLabel((EquipmentType) row[0]),
+                    row -> procedureLabel((EquipmentType) row[0]));
         } else if (filterEquipmentType != null) {
             summaryLabelHeader = "Hospital";
             summaryRows = mergeRows(
                     equipmentFacade.countActiveByInstitution(filterEquipmentType),
                     statusLogFacade.countReportedByInstitution(filterDate, filterEquipmentType),
                     statusLogFacade.sumProcedureCountByInstitution(filterDate, filterEquipmentType),
+                    row -> institutionLabel((Institution) row[0]),
                     row -> institutionLabel((Institution) row[0]));
         } else {
             summaryLabelHeader = "Equipment Type";
@@ -127,7 +129,8 @@ public class DashboardController implements Serializable {
                     equipmentFacade.countActiveByType(null),
                     statusLogFacade.countReportedByType(filterDate, null),
                     statusLogFacade.sumProcedureCountByType(filterDate, null),
-                    row -> typeLabel((EquipmentType) row[0]));
+                    row -> typeLabel((EquipmentType) row[0]),
+                    row -> procedureLabel((EquipmentType) row[0]));
         }
         summaryRows.sort(Comparator.comparing(SummaryRow::getLabel));
         equipmentTotal = summaryRows.stream().mapToLong(SummaryRow::getEquipmentCount).sum();
@@ -239,24 +242,32 @@ public class DashboardController implements Serializable {
      * Merges the three independently-grouped queries (fleet size, reported count, scan sum)
      * into one row per category, keyed by label so a category present in one query but absent
      * from another (e.g. a type with equipment but no submissions today) still gets a
-     * zero-filled row.
+     * zero-filled row. {@code scanLabeler} feeds a second, scan-context label (e.g. "PET Scans"
+     * rather than the machine name "PET Scanner") shown only on the scan chart.
      */
     private List<SummaryRow> mergeRows(List<Object[]> equipmentRows, List<Object[]> reportedRows,
-            List<Object[]> scanRows, Function<Object[], String> labeler) {
+            List<Object[]> scanRows, Function<Object[], String> labeler, Function<Object[], String> scanLabeler) {
         Map<String, long[]> byLabel = new LinkedHashMap<>();
+        Map<String, String> scanLabelByLabel = new LinkedHashMap<>();
         for (Object[] row : equipmentRows) {
-            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[0] = (Long) row[1];
+            String label = labeler.apply(row);
+            byLabel.computeIfAbsent(label, k -> new long[3])[0] = (Long) row[1];
+            scanLabelByLabel.putIfAbsent(label, scanLabeler.apply(row));
         }
         for (Object[] row : reportedRows) {
-            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[1] = (Long) row[1];
+            String label = labeler.apply(row);
+            byLabel.computeIfAbsent(label, k -> new long[3])[1] = (Long) row[1];
+            scanLabelByLabel.putIfAbsent(label, scanLabeler.apply(row));
         }
         for (Object[] row : scanRows) {
-            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[2] = ((Number) row[1]).longValue();
+            String label = labeler.apply(row);
+            byLabel.computeIfAbsent(label, k -> new long[3])[2] = ((Number) row[1]).longValue();
+            scanLabelByLabel.putIfAbsent(label, scanLabeler.apply(row));
         }
         List<SummaryRow> result = new ArrayList<>();
         for (Map.Entry<String, long[]> entry : byLabel.entrySet()) {
             long[] counts = entry.getValue();
-            result.add(new SummaryRow(entry.getKey(), counts[0], counts[1], counts[2]));
+            result.add(new SummaryRow(entry.getKey(), scanLabelByLabel.get(entry.getKey()), counts[0], counts[1], counts[2]));
         }
         return result;
     }
@@ -267,6 +278,15 @@ public class DashboardController implements Serializable {
 
     private String institutionLabel(Institution institution) {
         return institution != null ? institution.getName() : "—";
+    }
+
+    /** The scan/procedure-context label for a type (e.g. "PET Scans"), falling back to the machine name. */
+    private String procedureLabel(EquipmentType type) {
+        if (type == null) {
+            return "—";
+        }
+        String procedureName = type.getProcedureName();
+        return (procedureName != null && !procedureName.isBlank()) ? procedureName : type.getName();
     }
 
     /** JSON payload (`{categories:[...], equipment:[...]}`) for the equipment-by-category chart. */
@@ -285,12 +305,16 @@ public class DashboardController implements Serializable {
         return json.replace("</", "<\\/");
     }
 
-    /** JSON payload (`{categories:[...], data:[...]}`) for the scan-count chart. */
+    /**
+     * JSON payload (`{categories:[...], data:[...]}`) for the scan-count chart. Categories use
+     * each row's scan/procedure-context label (e.g. "PET Scans"), not the machine name shown
+     * on the equipment chart.
+     */
     public String getScanChartJson() {
         JsonArrayBuilder categories = Json.createArrayBuilder();
         JsonArrayBuilder data = Json.createArrayBuilder();
         for (SummaryRow row : summaryRows) {
-            categories.add(row.getLabel());
+            categories.add(row.getScanLabel());
             data.add(row.getScanCount());
         }
         String json = Json.createObjectBuilder()
@@ -410,18 +434,22 @@ public class DashboardController implements Serializable {
     /**
      * One row of the context-sensitive summary — a label (equipment type or hospital name) with
      * its fleet size, the count reported on the selected date, and that date's scan/study total.
+     * {@code scanLabel} is the same as {@code label} when grouped by hospital, but differs when
+     * grouped by equipment type (machine name vs. procedure name, e.g. "PET Scanner" vs. "PET Scans").
      */
     public static class SummaryRow implements Serializable {
 
         private static final long serialVersionUID = 1L;
 
         private final String label;
+        private final String scanLabel;
         private final long equipmentCount;
         private final long reportedCount;
         private final long scanCount;
 
-        SummaryRow(String label, long equipmentCount, long reportedCount, long scanCount) {
+        SummaryRow(String label, String scanLabel, long equipmentCount, long reportedCount, long scanCount) {
             this.label = label;
+            this.scanLabel = scanLabel;
             this.equipmentCount = equipmentCount;
             this.reportedCount = reportedCount;
             this.scanCount = scanCount;
@@ -429,6 +457,10 @@ public class DashboardController implements Serializable {
 
         public String getLabel() {
             return label;
+        }
+
+        public String getScanLabel() {
+            return scanLabel;
         }
 
         public long getEquipmentCount() {

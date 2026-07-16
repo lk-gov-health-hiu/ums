@@ -22,6 +22,9 @@
                 <p:column headerText="Name">
                     <h:outputText value="#{t.name}"/>
                 </p:column>
+                <p:column headerText="Procedure Name">
+                    <h:outputText value="#{t.procedureName}"/>
+                </p:column>
                 <p:column headerText="Parent">
                     <h:outputText value="#{t.parent.name}"/>
                 </p:column>
@@ -39,6 +42,10 @@
                 <h:panelGrid columns="2" rendered="#{equipmentTypeController.current != null}" style="width:100%">
                     <p:outputLabel value="Name"/>
                     <p:inputText value="#{equipmentTypeController.current.name}" required="true"/>
+
+                    <p:outputLabel value="Procedure Name"/>
+                    <p:inputText value="#{equipmentTypeController.current.procedureName}"
+                                  placeholder="e.g. PET Scans — defaults to Name if left blank"/>
 
                     <p:outputLabel value="Parent"/>
                     <p:selectOneMenu value="#{equipmentTypeController.current.parent}" converter="equipmentTypeConverter">

@@ -24,6 +24,14 @@ public class EquipmentType extends BaseEntity {
     @Column(name = "name")
     private String name;
 
+    /**
+     * The name used when talking about the test/procedure this equipment performs, distinct
+     * from {@link #name} (the machine itself) — e.g. machine name "PET Scanner" vs. procedure
+     * name "PET Scans". Falls back to {@link #name} wherever blank.
+     */
+    @Column(name = "procedure_name")
+    private String procedureName;
+
     @ManyToOne
     @JoinColumn(name = "parent_id")
     private EquipmentType parent;
@@ -34,6 +42,14 @@ public class EquipmentType extends BaseEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getProcedureName() {
+        return procedureName;
+    }
+
+    public void setProcedureName(String procedureName) {
+        this.procedureName = procedureName;
     }
 
     public EquipmentType getParent() {
