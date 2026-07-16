@@ -140,6 +140,7 @@ public class DashboardController implements Serializable {
             summaryRows = mergeRows(
                     equipmentFacade.countActiveByType(filterHospital),
                     statusLogFacade.countReportedByType(filterDate, filterHospital),
+                    statusLogFacade.countFunctioningByType(filterDate, filterHospital),
                     statusLogFacade.sumProcedureCountByType(filterDate, filterHospital),
                     row -> typeLabel((EquipmentType) row[0]));
         } else if (filterEquipmentType != null) {
@@ -147,6 +148,7 @@ public class DashboardController implements Serializable {
             summaryRows = mergeRows(
                     equipmentFacade.countActiveByInstitution(filterEquipmentType),
                     statusLogFacade.countReportedByInstitution(filterDate, filterEquipmentType),
+                    statusLogFacade.countFunctioningByInstitution(filterDate, filterEquipmentType),
                     statusLogFacade.sumProcedureCountByInstitution(filterDate, filterEquipmentType),
                     row -> institutionLabel((Institution) row[0]));
         } else {
@@ -154,6 +156,7 @@ public class DashboardController implements Serializable {
             summaryRows = mergeRows(
                     equipmentFacade.countActiveByType(null),
                     statusLogFacade.countReportedByType(filterDate, null),
+                    statusLogFacade.countFunctioningByType(filterDate, null),
                     statusLogFacade.sumProcedureCountByType(filterDate, null),
                     row -> typeLabel((EquipmentType) row[0]));
         }
@@ -259,26 +262,30 @@ public class DashboardController implements Serializable {
     }
 
     /**
-     * Merges the three independently-grouped queries (fleet size, reported count, scan sum) into
-     * one row per category, keyed by label so a category present in one query but absent from
-     * another (e.g. a type with equipment but no submissions today) still gets a zero-filled row.
+     * Merges the four independently-grouped queries (fleet size, reported count, functioning
+     * count, scan sum) into one row per category, keyed by label so a category present in one
+     * query but absent from another (e.g. a type with equipment but no submissions today) still
+     * gets a zero-filled row.
      */
     private List<SummaryRow> mergeRows(List<Object[]> equipmentRows, List<Object[]> reportedRows,
-            List<Object[]> scanRows, Function<Object[], String> labeler) {
+            List<Object[]> functioningRows, List<Object[]> scanRows, Function<Object[], String> labeler) {
         Map<String, long[]> byLabel = new LinkedHashMap<>();
         for (Object[] row : equipmentRows) {
-            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[0] = (Long) row[1];
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[4])[0] = (Long) row[1];
         }
         for (Object[] row : reportedRows) {
-            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[1] = (Long) row[1];
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[4])[1] = (Long) row[1];
+        }
+        for (Object[] row : functioningRows) {
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[4])[2] = (Long) row[1];
         }
         for (Object[] row : scanRows) {
-            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[3])[2] = ((Number) row[1]).longValue();
+            byLabel.computeIfAbsent(labeler.apply(row), k -> new long[4])[3] = ((Number) row[1]).longValue();
         }
         List<SummaryRow> result = new ArrayList<>();
         for (Map.Entry<String, long[]> entry : byLabel.entrySet()) {
             long[] counts = entry.getValue();
-            result.add(new SummaryRow(entry.getKey(), counts[0], counts[1], counts[2]));
+            result.add(new SummaryRow(entry.getKey(), counts[0], counts[1], counts[2], counts[3]));
         }
         return result;
     }
@@ -291,20 +298,20 @@ public class DashboardController implements Serializable {
         return institution != null ? institution.getName() : "—";
     }
 
-    /** JSON payload (`{categories:[...], equipment:[...], reported:[...]}`) for the grouped equipment/reported chart. */
+    /** JSON payload (`{categories:[...], equipment:[...], functioning:[...]}`) for the grouped equipment/functioning chart. */
     public String getEquipmentChartJson() {
         JsonArrayBuilder categories = Json.createArrayBuilder();
         JsonArrayBuilder equipment = Json.createArrayBuilder();
-        JsonArrayBuilder reported = Json.createArrayBuilder();
+        JsonArrayBuilder functioning = Json.createArrayBuilder();
         for (SummaryRow row : summaryRows) {
             categories.add(row.getLabel());
             equipment.add(row.getEquipmentCount());
-            reported.add(row.getReportedCount());
+            functioning.add(row.getFunctioningCount());
         }
         String json = Json.createObjectBuilder()
                 .add("categories", categories)
                 .add("equipment", equipment)
-                .add("reported", reported)
+                .add("functioning", functioning)
                 .build()
                 .toString();
         return json.replace("</", "<\\/");
@@ -443,12 +450,14 @@ public class DashboardController implements Serializable {
         private final String label;
         private final long equipmentCount;
         private final long reportedCount;
+        private final long functioningCount;
         private final long scanCount;
 
-        SummaryRow(String label, long equipmentCount, long reportedCount, long scanCount) {
+        SummaryRow(String label, long equipmentCount, long reportedCount, long functioningCount, long scanCount) {
             this.label = label;
             this.equipmentCount = equipmentCount;
             this.reportedCount = reportedCount;
+            this.functioningCount = functioningCount;
             this.scanCount = scanCount;
         }
 
@@ -462,6 +471,10 @@ public class DashboardController implements Serializable {
 
         public long getReportedCount() {
             return reportedCount;
+        }
+
+        public long getFunctioningCount() {
+            return functioningCount;
         }
 
         public long getScanCount() {

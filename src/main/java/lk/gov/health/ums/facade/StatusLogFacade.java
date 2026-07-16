@@ -139,6 +139,35 @@ public class StatusLogFacade extends AbstractFacade<StatusLog> {
     }
 
     /**
+     * Distinct equipment reported as FUNCTIONING on the given day, grouped by equipment type and
+     * optionally scoped to one hospital — feeds the dashboard's "equipment vs. functioning" chart.
+     */
+    public List<Object[]> countFunctioningByType(LocalDate date, Institution institution) {
+        String jpql = "SELECT s.equipment.type, COUNT(DISTINCT s.equipment) FROM StatusLog s "
+                + "WHERE s.logDate = :date AND s.status = lk.gov.health.ums.enums.MachineStatus.FUNCTIONING"
+                + (institution != null ? " AND s.equipment.institution = :institution" : "")
+                + " GROUP BY s.equipment.type";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class).setParameter("date", date);
+        if (institution != null) {
+            query.setParameter("institution", institution);
+        }
+        return query.getResultList();
+    }
+
+    /** Same as {@link #countFunctioningByType}, grouped by hospital and optionally scoped to one equipment type. */
+    public List<Object[]> countFunctioningByInstitution(LocalDate date, EquipmentType type) {
+        String jpql = "SELECT s.equipment.institution, COUNT(DISTINCT s.equipment) FROM StatusLog s "
+                + "WHERE s.logDate = :date AND s.status = lk.gov.health.ums.enums.MachineStatus.FUNCTIONING"
+                + (type != null ? " AND s.equipment.type = :type" : "")
+                + " GROUP BY s.equipment.institution";
+        TypedQuery<Object[]> query = em.createQuery(jpql, Object[].class).setParameter("date", date);
+        if (type != null) {
+            query.setParameter("type", type);
+        }
+        return query.getResultList();
+    }
+
+    /**
      * Sum of procedure counts (scans/studies) for the given day, grouped by equipment type and
      * optionally scoped to one hospital — feeds the dashboard's "scans by type" chart.
      */

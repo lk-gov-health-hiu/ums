@@ -94,7 +94,7 @@
                         <h:panelGroup layout="block" rendered="#{not empty dashboardController.summaryRows}">
                             <div class="summary-body">
                                 <div class="chart-col">
-                                    <h4>Equipment vs. reported, by #{dashboardController.summaryLabelHeader}</h4>
+                                    <h4>Equipment vs. functioning, by #{dashboardController.summaryLabelHeader}</h4>
                                     <div id="equipmentChart" class="summary-chart"/>
                                 </div>
                                 <div class="chart-col">
@@ -126,9 +126,9 @@
                                                 label: { show: true, position: 'right', color: '#e7edf0' }
                                             },
                                             {
-                                                name: 'Reported',
+                                                name: 'Functioning',
                                                 type: 'bar',
-                                                data: equipmentPayload.reported,
+                                                data: equipmentPayload.functioning,
                                                 itemStyle: { color: '#4fc3d9', borderRadius: [0, 3, 3, 0] },
                                                 label: { show: true, position: 'right', color: '#e7edf0' }
                                             }
