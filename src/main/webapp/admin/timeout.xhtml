@@ -1,7 +1,15 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>Session expired</title></head>
-<body>
-    <p>Your session has expired. <a href="#{request.contextPath}/admin/login.xhtml">Sign in again</a>.</p>
-</body>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:p="primefaces">
+<h:head>
+    <title>Session expired — Utilisation Monitoring System</title>
+    <h:outputStylesheet library="css" name="ums.css"/>
+</h:head>
+<h:body>
+    <p:panel header="Utilisation Monitoring System" styleClass="ums-login-panel">
+        <p>Your session has expired due to inactivity. Please sign in again to continue.</p>
+        <p:button value="Sign in again" outcome="/admin/login.xhtml" style="margin-top:12px"/>
+    </p:panel>
+</h:body>
 </html>
